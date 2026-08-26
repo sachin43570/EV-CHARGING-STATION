@@ -1,0 +1,14 @@
+[
+  {
+    "id": "BK-A82F31C2",
+    "stationId": "stn-001",
+    "stationName": "VoltMap Koramangala Hub",
+    "name": "Sachin",
+    "vehicleNumber": "KA05MX1234",
+    "date": "2026-08-26",
+    "time": "19:30",
+    "durationMinutes": 30,
+    "status": "confirmed",
+    "createdAt": "2026-08-25T14:30:00.000Z"
+  }
+]

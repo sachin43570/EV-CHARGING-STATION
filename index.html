@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>VoltMap — Smart EV Charging</title>
+
+    <!-- Leaflet -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap"
+        rel="stylesheet"
+    >
+
+    <!-- Icons -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    >
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- ================= TOP NAV ================= -->
+
+    <header class="topbar">
+
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+
+            <div>
+                <div class="brand-name">Volt<span>Map</span></div>
+                <div class="brand-subtitle">SMART EV CHARGING</div>
+            </div>
+        </div>
+
+
+        <div class="search-container">
+
+            <i class="fa-solid fa-magnifying-glass"></i>
+
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search charging stations, locations..."
+            >
+
+            <button id="clearSearch" class="clear-search">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="search-suggestions" id="searchSuggestions" aria-live="polite"></div>
+
+        </div>
+
+
+        <div class="top-actions">
+
+            <button class="location-btn" id="locationBtn">
+                <i class="fa-solid fa-location-crosshairs"></i>
+                <span>Near me</span>
+            </button>
+
+            <div class="live-status">
+                <span class="live-dot"></span>
+                LIVE
+            </div>
+
+            <button class="icon-btn" id="notificationBtn">
+                <i class="fa-regular fa-bell"></i>
+                <span class="notification-count">3</span>
+            </button>
+
+            <button class="icon-btn" id="themeBtn">
+                <i class="fa-solid fa-sun"></i>
+            </button>
+
+            <button class="orders-btn" id="ordersBtn">
+                <i class="fa-regular fa-calendar-check"></i>
+                <span>My orders</span>
+            </button>
+
+            <button class="profile-btn" id="profileBtn">
+                <div class="avatar">SM</div>
+                <span>Sachin</span>
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="main-layout">
+
+
+        <!-- ================= SIDEBAR ================= -->
+
+        <aside class="sidebar">
+
+            <div class="sidebar-header">
+
+                <div>
+                    <h1>Find a charger</h1>
+                    <p>
+                        <span id="stationCount">12</span>
+                        stations available
+                    </p>
+                </div>
+
+                <button class="filter-open-btn" id="filterBtn">
+                    <i class="fa-solid fa-sliders"></i>
+                    Filters
+                </button>
+
+            </div>
+
+
+            <!-- QUICK FILTERS -->
+
+            <div class="quick-filters">
+
+                <button class="quick-filter active" data-filter="all">
+                    All
+                </button>
+
+                <button class="quick-filter" data-filter="available">
+                    <span class="small-dot green"></span>
+                    Available
+                </button>
+
+                <button class="quick-filter" data-filter="fast">
+                    <i class="fa-solid fa-bolt"></i>
+                    Fast
+                </button>
+
+                <button class="quick-filter" data-filter="cheap">
+                    <i class="fa-solid fa-indian-rupee-sign"></i>
+                    Cheap
+                </button>
+
+            </div>
+
+
+            <!-- SORT -->
+
+            <div class="sort-row">
+
+                <span>Recommended</span>
+
+                <select id="sortSelect">
+                    <option value="recommended">Recommended</option>
+                    <option value="distance">Nearest</option>
+                    <option value="price">Cheapest</option>
+                    <option value="speed">Fastest</option>
+                    <option value="rating">Highest rated</option>
+                    <option value="availability">Most available</option>
+                </select>
+
+            </div>
+
+
+            <!-- STATION LIST -->
+
+            <div class="station-list" id="stationList"></div>
+
+        </aside>
+
+
+        <!-- ================= MAP AREA ================= -->
+
+        <section class="map-area">
+
+            <div id="map"></div>
+
+
+            <!-- MAP CONTROLS -->
+
+            <div class="map-controls">
+
+                <button id="mapLocationBtn" title="My location">
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                </button>
+
+                <button id="fullscreenBtn" title="Fullscreen">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+
+                <button id="savedPlacesBtn" title="Saved places">
+                    <i class="fa-solid fa-house-circle-check"></i>
+                </button>
+
+            </div>
+
+            <div class="saved-places-panel" id="savedPlacesPanel">
+                <div class="saved-places-heading">
+                    <strong>Saved places</strong>
+                    <button id="closeSavedPlaces" aria-label="Close saved places"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p>Move the map to your location, then save its centre.</p>
+                <div class="saved-place-actions">
+                    <button data-place="home"><i class="fa-solid fa-house"></i> Home</button>
+                    <button data-place="office"><i class="fa-solid fa-briefcase"></i> Office</button>
+                    <button data-place="college"><i class="fa-solid fa-graduation-cap"></i> College</button>
+                </div>
+            </div>
+
+
+            <!-- MAP LEGEND -->
+
+            <div class="map-legend">
+
+                <div>
+                    <span class="legend-dot available"></span>
+                    Available
+                </div>
+
+                <div>
+                    <span class="legend-dot limited"></span>
+                    Limited
+                </div>
+
+                <div>
+                    <span class="legend-dot full"></span>
+                    Full
+                </div>
+
+            </div>
+
+
+            <!-- MAP SUMMARY -->
+
+            <div class="map-summary">
+
+                <div class="summary-icon">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+
+                <div>
+                    <strong id="mapStationCount">12</strong>
+                    <span>chargers nearby</span>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- ================= STATION DETAIL DRAWER ================= -->
+
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+
+    <aside class="station-drawer" id="stationDrawer">
+
+        <button class="drawer-close" id="drawerClose">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div id="stationDetails"></div>
+
+    </aside>
+
+
+    <!-- ================= FILTER MODAL ================= -->
+
+    <div class="modal-overlay" id="filterModal">
+
+        <div class="modal filter-modal">
+
+            <div class="modal-header">
+                <div>
+                    <span class="modal-eyebrow">DISCOVER</span>
+                    <h2>Advanced filters</h2>
+                </div>
+
+                <button class="modal-close" data-close="filterModal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+
+            <div class="filter-section">
+
+                <label>Charger type</label>
+
+                <div class="filter-options">
+
+                    <button class="option-btn active" data-type="charger" data-value="all">
+                        All
+                    </button>
+
+                    <button class="option-btn" data-type="charger" data-value="AC">
+                        AC
+                    </button>
+
+                    <button class="option-btn" data-type="charger" data-value="DC">
+                        DC
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="filter-section">
+
+                <label>Connector</label>
+
+                <select id="connectorFilter">
+
+                    <option value="all">All connectors</option>
+                    <option value="CCS2">CCS2</option>
+                    <option value="Type2">Type 2</option>
+                    <option value="CHAdeMO">CHAdeMO</option>
+                    <option value="Bharat AC001">Bharat AC001</option>
+
+                </select>
+
+            </div>
+
+
+            <div class="filter-section">
+
+                <label>
+                    Maximum price:
+                    ₹<span id="priceValue">25</span>/kWh
+                </label>
+
+                <input
+                    type="range"
+                    id="priceRange"
+                    min="8"
+                    max="25"
+                    value="25"
+                    step="1"
+                >
+
+                <div class="range-labels">
+                    <span>₹8</span>
+                    <span>₹25</span>
+                </div>
+
+            </div>
+
+
+            <div class="filter-section">
+
+                <label>Minimum charging speed</label>
+
+                <select id="speedFilter">
+
+                    <option value="0">Any speed</option>
+                    <option value="7">7 kW+</option>
+                    <option value="50">50 kW+</option>
+                    <option value="100">100 kW+</option>
+                    <option value="150">150 kW+</option>
+
+                </select>
+
+            </div>
+
+
+            <div class="filter-section">
+
+                <label>Availability</label>
+
+                <label class="switch-row">
+
+                    <input type="checkbox" id="availableFilter">
+
+                    <span class="switch"></span>
+
+                    Available chargers only
+
+                </label>
+
+            </div>
+
+
+            <div class="filter-section">
+
+                <label>Amenities</label>
+
+                <div class="amenities">
+
+                    <label>
+                        <input type="checkbox" value="cafe">
+                        <span><i class="fa-solid fa-mug-hot"></i> Cafe</span>
+                    </label>
+
+                    <label>
+                        <input type="checkbox" value="parking">
+                        <span><i class="fa-solid fa-square-parking"></i> Parking</span>
+                    </label>
+
+                    <label>
+                        <input type="checkbox" value="wifi">
+                        <span><i class="fa-solid fa-wifi"></i> Wi-Fi</span>
+                    </label>
+
+                    <label>
+                        <input type="checkbox" value="restroom">
+                        <span><i class="fa-solid fa-restroom"></i> Restroom</span>
+                    </label>
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button class="btn-secondary" id="clearFilters">
+                    Clear all
+                </button>
+
+                <button class="btn-primary" id="applyFilters">
+                    Apply filters
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= BOOKING MODAL ================= -->
+
+    <div class="modal-overlay" id="bookingModal">
+
+        <div class="modal booking-modal">
+
+            <div class="booking-progress">
+
+                <div class="progress-step active">
+                    <span>1</span>
+                    Charger
+                </div>
+
+                <div class="progress-line"></div>
+
+                <div class="progress-step">
+                    <span>2</span>
+                    Date
+                </div>
+
+                <div class="progress-line"></div>
+
+                <div class="progress-step">
+                    <span>3</span>
+                    Vehicle
+                </div>
+
+                <div class="progress-line"></div>
+
+                <div class="progress-step">
+                    <span>4</span>
+                    Confirm
+                </div>
+
+            </div>
+
+
+            <div id="bookingContent"></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= PAYMENT MODAL ================= -->
+
+    <div class="modal-overlay" id="paymentModal">
+
+        <div class="modal payment-modal">
+
+            <div class="modal-header">
+                <div>
+                    <span class="modal-eyebrow">SECURE CHECKOUT</span>
+                    <h2>Complete payment</h2>
+                </div>
+
+                <button class="modal-close" data-close="paymentModal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="paymentContent"></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= ORDERS MODAL ================= -->
+
+    <div class="modal-overlay" id="ordersModal">
+
+        <div class="modal orders-modal">
+
+            <div class="modal-header">
+                <div>
+                    <span class="modal-eyebrow">BOOKING HISTORY</span>
+                    <h2>My orders</h2>
+                </div>
+
+                <button class="modal-close" data-close="ordersModal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="ordersContent"></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= SETTINGS MODAL ================= -->
+
+    <div class="modal-overlay" id="settingsModal">
+
+        <div class="modal settings-modal">
+
+            <div class="modal-header">
+                <div>
+                    <span class="modal-eyebrow">ACCOUNT</span>
+                    <h2>Settings</h2>
+                </div>
+
+                <button class="modal-close" data-close="settingsModal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="settings-user" id="settingsUser"></div>
+
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                Log out
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= NOTIFICATION PANEL ================= -->
+
+    <div class="notification-panel" id="notificationPanel">
+
+        <div class="notification-header">
+
+            <div>
+                <span class="modal-eyebrow">ALERTS</span>
+                <h3>Notifications</h3>
+            </div>
+
+            <button id="markRead">
+                Mark all read
+            </button>
+
+        </div>
+
+
+        <div class="notifications">
+
+            <div class="notification unread">
+
+                <div class="notification-icon green-icon">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+
+                <div>
+                    <strong>Station availability changed</strong>
+                    <p>VoltMap Energy Hub now has 6 available chargers.</p>
+                    <small>2 min ago</small>
+                </div>
+
+            </div>
+
+
+            <div class="notification unread">
+
+                <div class="notification-icon blue-icon">
+                    <i class="fa-regular fa-calendar"></i>
+                </div>
+
+                <div>
+                    <strong>Upcoming booking</strong>
+                    <p>Your booking starts at 7:30 PM today.</p>
+                    <small>25 min ago</small>
+                </div>
+
+            </div>
+
+
+            <div class="notification unread">
+
+                <div class="notification-icon orange-icon">
+                    <i class="fa-solid fa-indian-rupee-sign"></i>
+                </div>
+
+                <div>
+                    <strong>Payment successful</strong>
+                    <p>Your previous charging session was completed.</p>
+                    <small>2 hours ago</small>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= COST CALCULATOR ================= -->
+
+    <div class="modal-overlay" id="calculatorModal">
+
+        <div class="modal calculator-modal">
+
+            <div class="modal-header">
+
+                <div>
+                    <span class="modal-eyebrow">EV TOOLS</span>
+                    <h2>Charging cost estimator</h2>
+                </div>
+
+                <button class="modal-close" data-close="calculatorModal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+            </div>
+
+
+            <div class="calculator-inputs">
+
+                <label>
+                    Battery capacity
+                    <div class="input-unit">
+                        <input type="number" id="batteryCapacity" value="40.5">
+                        <span>kWh</span>
+                    </div>
+                </label>
+
+                <label>
+                    Current battery
+                    <div class="input-unit">
+                        <input type="number" id="currentBattery" value="25">
+                        <span>%</span>
+                    </div>
+                </label>
+
+                <label>
+                    Target battery
+                    <div class="input-unit">
+                        <input type="number" id="targetBattery" value="80">
+                        <span>%</span>
+                    </div>
+                </label>
+
+                <label>
+                    Price
+                    <div class="input-unit">
+                        <input type="number" id="chargePrice" value="18">
+                        <span>₹/kWh</span>
+                    </div>
+                </label>
+
+            </div>
+
+
+            <button class="btn-primary full-btn" id="calculateBtn">
+                Calculate
+            </button>
+
+
+            <div class="calculator-result">
+
+                <div>
+                    <span>Energy required</span>
+                    <strong id="energyResult">22.28 kWh</strong>
+                </div>
+
+                <div>
+                    <span>Estimated cost</span>
+                    <strong id="costResult">₹401</strong>
+                </div>
+
+                <div>
+                    <span>Estimated time</span>
+                    <strong id="timeResult">25 min</strong>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= TOAST ================= -->
+
+    <div class="toast" id="toast">
+
+        <div class="toast-icon">
+            <i class="fa-solid fa-check"></i>
+        </div>
+
+        <div>
+            <strong id="toastTitle">Success</strong>
+            <p id="toastMessage">Operation completed.</p>
+        </div>
+
+    </div>
+
+
+    <!-- ================= MOBILE NAV ================= -->
+
+    <nav class="mobile-nav">
+
+        <button class="active">
+            <i class="fa-solid fa-map"></i>
+            <span>Map</span>
+        </button>
+
+        <button id="mobileExplore">
+            <i class="fa-solid fa-compass"></i>
+            <span>Explore</span>
+        </button>
+
+        <button id="mobileBookings">
+            <i class="fa-regular fa-calendar"></i>
+            <span>Bookings</span>
+        </button>
+
+        <button>
+            <i class="fa-regular fa-heart"></i>
+            <span>Favorites</span>
+        </button>
+
+        <button>
+            <i class="fa-regular fa-user"></i>
+            <span>Profile</span>
+        </button>
+
+    </nav>
+
+</div>
+
+
+<!-- ================= AUTHENTICATION GATE ================= -->
+
+<div class="auth-overlay" id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+
+    <div class="auth-card">
+
+        <div class="auth-brand">
+            <div class="brand-icon"><i class="fa-solid fa-bolt"></i></div>
+            <div>
+                <div class="brand-name">Volt<span>Map</span></div>
+                <div class="brand-subtitle">SMART EV CHARGING</div>
+            </div>
+        </div>
+
+        <span class="modal-eyebrow" id="authEyebrow">WELCOME BACK</span>
+        <h1 id="authTitle">Sign in to VoltMap</h1>
+        <p id="authDescription">Choose your account type and sign in to find a charger.</p>
+
+        <form id="authForm" novalidate>
+            <label class="auth-label">
+                Account type
+                <select id="authRole" required>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </label>
+
+            <label class="auth-label auth-name-field" hidden>
+                Full name
+                <input id="authName" type="text" placeholder="Your name" autocomplete="name">
+            </label>
+
+            <label class="auth-label">
+                Email address
+                <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+            </label>
+
+            <label class="auth-label">
+                Password
+                <input id="authPassword" type="password" placeholder="Enter your password" autocomplete="current-password" minlength="6" required>
+            </label>
+
+            <p class="auth-error" id="authError" role="alert"></p>
+
+            <button class="btn-primary full-btn" id="authSubmit" type="submit">Sign in</button>
+        </form>
+
+        <div class="auth-links">
+            <button id="authModeToggle" type="button">Create an account</button>
+            <button id="forgotPasswordBtn" type="button">Forgot password?</button>
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Socket.io -->
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<script src="app.js"></script>
+
+</body>
+</html>
