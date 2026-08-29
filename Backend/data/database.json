@@ -10,7 +10,15 @@
     }
   ],
   "stationRatings": [],
-  "savedPlaces": [],
+  "savedPlaces": [
+    {
+      "email": "sachinmaurya43570@gmail.com",
+      "place": "home",
+      "lat": 12.910220359854053,
+      "lng": 77.56422221660615,
+      "updatedAt": "2026-08-29T10:10:54.067Z"
+    }
+  ],
   "orders": [
     {
       "id": "VM-2026-655597",

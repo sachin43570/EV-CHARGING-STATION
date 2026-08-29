@@ -11,7 +11,7 @@
    CONFIGURATION
    ========================================================= */
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "http://localhost:5500/api";
 
 async function apiRequest(path, options = {}) {
 
@@ -29,15 +29,17 @@ async function apiRequest(path, options = {}) {
         payload = await response.json();
     }
     catch (parseError) {
-        // The server responded without a JSON body (for example a proxy
-        // error page). Treat this the same as a failed request instead of
-        // throwing a generic parse error that gets miscategorized below.
         payload = {};
     }
 
     if (!response.ok) {
-        const error = new Error(payload.message || `Request failed (${response.status})`);
+        const error = new Error(
+            payload.message ||
+            `Request failed (${response.status})`
+        );
+
         error.isApiError = true;
+
         throw error;
     }
 
@@ -45,16 +47,14 @@ async function apiRequest(path, options = {}) {
 
 }
 
+
 function syncToBackend(path, options) {
 
     apiRequest(path, options).catch(() => {
-        // The browser cache remains usable when the local API is not running.
+        // Browser/localStorage remains usable when backend is unavailable.
     });
 
 }
-
-// When deployed:
-// const API_BASE = "https://your-backend-url.com/api";
 
 
 /* =========================================================
@@ -364,17 +364,29 @@ const stations = [
         address: "Phoenix Marketcity Road, Mahadevapura",
         lat: 12.9948,
         lng: 77.6964,
+
         chargerType: "DC",
         connector: "CCS2",
+
         power: 80,
         price: 17,
+
         available: 4,
         total: 6,
+
         rating: 4.6,
         reviews: 74,
+
         open: true,
-        amenities: ["cafe", "parking", "restroom"],
+
+        amenities: [
+            "cafe",
+            "parking",
+            "restroom"
+        ],
+
         distance: 5.1,
+
         favorite: false
     },
 
@@ -385,17 +397,29 @@ const stations = [
         address: "27th Main Road, HSR Layout",
         lat: 12.9116,
         lng: 77.6389,
+
         chargerType: "DC",
         connector: "CCS2",
+
         power: 120,
         price: 18,
+
         available: 3,
         total: 8,
+
         rating: 4.5,
         reviews: 91,
+
         open: true,
-        amenities: ["cafe", "wifi", "parking"],
+
+        amenities: [
+            "cafe",
+            "wifi",
+            "parking"
+        ],
+
         distance: 10.4,
+
         favorite: false
     },
 
@@ -406,17 +430,29 @@ const stations = [
         address: "4th Block, Jayanagar",
         lat: 12.9250,
         lng: 77.5938,
+
         chargerType: "AC",
         connector: "Type2",
+
         power: 22,
         price: 11,
+
         available: 6,
         total: 8,
+
         rating: 4.4,
         reviews: 58,
+
         open: true,
-        amenities: ["parking", "wifi", "restroom"],
+
+        amenities: [
+            "parking",
+            "wifi",
+            "restroom"
+        ],
+
         distance: 12.7,
+
         favorite: false
     },
 
@@ -427,17 +463,29 @@ const stations = [
         address: "New Town, Yelahanka",
         lat: 13.1007,
         lng: 77.5963,
+
         chargerType: "DC",
         connector: "CCS2",
+
         power: 150,
         price: 20,
+
         available: 2,
         total: 6,
+
         rating: 4.7,
         reviews: 104,
+
         open: true,
-        amenities: ["cafe", "parking", "restroom"],
+
+        amenities: [
+            "cafe",
+            "parking",
+            "restroom"
+        ],
+
         distance: 19.3,
+
         favorite: false
     },
 
@@ -448,17 +496,30 @@ const stations = [
         address: "Sarjapur Main Road, Bengaluru",
         lat: 12.9103,
         lng: 77.6880,
+
         chargerType: "DC",
         connector: "CHAdeMO",
+
         power: 100,
         price: 19,
+
         available: 5,
         total: 8,
+
         rating: 4.6,
         reviews: 83,
+
         open: true,
-        amenities: ["cafe", "parking", "wifi", "restroom"],
+
+        amenities: [
+            "cafe",
+            "parking",
+            "wifi",
+            "restroom"
+        ],
+
         distance: 13.4,
+
         favorite: false
     },
 
@@ -469,17 +530,29 @@ const stations = [
         address: "MG Road, Bengaluru",
         lat: 12.9756,
         lng: 77.6065,
+
         chargerType: "DC",
         connector: "CCS2",
+
         power: 60,
         price: 16,
+
         available: 1,
         total: 4,
+
         rating: 4.3,
         reviews: 67,
+
         open: true,
-        amenities: ["cafe", "parking", "wifi"],
+
+        amenities: [
+            "cafe",
+            "parking",
+            "wifi"
+        ],
+
         distance: 9.2,
+
         favorite: false
     }
 
@@ -513,6 +586,8 @@ let currentUser = null;
 let selectedPaymentMethod = "qr";
 
 let bookingDraft = {};
+
+let currentPaymentAmount = 0;
 
 
 /* =========================================================
@@ -559,40 +634,56 @@ const toast =
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    // Each step below is independent of the others. If one of them throws
-    // (for example the map's tile library failing to load on a slow or
-    // restricted connection), it must not stop the remaining steps from
-    // running — otherwise things like login/signup never get wired up.
     try {
         initializeMap();
-    } catch (mapError) {
-        console.error("Map failed to initialize:", mapError);
+    }
+    catch (mapError) {
+        console.error(
+            "Map failed to initialize:",
+            mapError
+        );
     }
 
     try {
         renderStations();
-    } catch (renderError) {
-        console.error("Station list failed to render:", renderError);
+    }
+    catch (renderError) {
+        console.error(
+            "Station list failed to render:",
+            renderError
+        );
     }
 
     try {
         setupEvents();
-    } catch (eventsError) {
-        console.error("UI events failed to bind:", eventsError);
+    }
+    catch (eventsError) {
+        console.error(
+            "UI events failed to bind:",
+            eventsError
+        );
     }
 
     updateStats();
 
     try {
         initializeTheme();
-    } catch (themeError) {
-        console.error("Theme failed to initialize:", themeError);
+    }
+    catch (themeError) {
+        console.error(
+            "Theme failed to initialize:",
+            themeError
+        );
     }
 
     try {
         initializeAuth();
-    } catch (authError) {
-        console.error("Auth failed to initialize:", authError);
+    }
+    catch (authError) {
+        console.error(
+            "Auth failed to initialize:",
+            authError
+        );
     }
 
     simulateLiveUpdates();
@@ -613,15 +704,14 @@ function initializeMap() {
         12
     );
 
-
     updateMapTheme();
-
 
     renderMarkers();
 
     renderSavedPlaces();
 
 }
+
 
 function updateMapTheme() {
 
@@ -631,23 +721,27 @@ function updateMapTheme() {
         map.removeLayer(map.baseLayer);
     }
 
-    const light = document.body.classList.contains("light");
+    const light =
+        document.body.classList.contains("light");
 
-    // OpenStreetMap's standard tiles are free and require no API key/signup
-    // (CARTO's basemaps.cartocdn.com raster tiles now require one, which is
-    // what was showing the "API key required" watermark). Dark mode is
-    // achieved with a CSS filter on the tile layer instead of a separate
-    // dark tile server — see the "#map:not(.light-map)" rule in style.css.
-    map.baseLayer = L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-            attribution: "&copy; OpenStreetMap contributors",
-            maxZoom: 19,
-            subdomains: "abc"
-        }
-    ).addTo(map);
+    map.baseLayer =
+        L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                attribution:
+                    "&copy; OpenStreetMap contributors",
+                maxZoom: 19,
+                subdomains: "abc"
+            }
+        ).addTo(map);
 
-    document.getElementById("map").classList.toggle("light-map", light);
+    document
+        .getElementById("map")
+        .classList
+        .toggle(
+            "light-map",
+            light
+        );
 
 }
 
@@ -661,10 +755,14 @@ function createMarkerIcon(station) {
     let color = "#00e5a0";
 
     if (station.available === 0) {
+
         color = "#ff5c5c";
+
     }
     else if (station.available <= 2) {
+
         color = "#ffb020";
+
     }
 
     return L.divIcon({
@@ -696,6 +794,7 @@ function createMarkerIcon(station) {
         `,
 
         iconSize: [34, 34],
+
         iconAnchor: [17, 34]
 
     });
@@ -709,30 +808,33 @@ function createMarkerIcon(station) {
 
 function renderMarkers() {
 
-    // Nothing to draw on if the map never finished initializing (for
-    // example because the Leaflet library failed to load).
     if (!map) return;
 
     Object.values(markers).forEach(marker => {
+
         map.removeLayer(marker);
+
     });
 
     markers = {};
-
 
     filteredStations.forEach(station => {
 
         const marker =
             L.marker(
-                [station.lat, station.lng],
+                [
+                    station.lat,
+                    station.lng
+                ],
                 {
-                    icon: createMarkerIcon(station)
+                    icon:
+                        createMarkerIcon(station)
                 }
             )
             .addTo(map);
 
-
         marker.bindPopup(`
+
             <div>
 
                 <div class="popup-title">
@@ -769,19 +871,25 @@ function renderMarkers() {
                 </button>
 
             </div>
+
         `);
 
+        marker.on(
+            "click",
+            () => {
 
-        marker.on("click", () => {
+                selectedStation =
+                    station;
 
-            selectedStation = station;
+                highlightCard(
+                    station.id
+                );
 
-            highlightCard(station.id);
+            }
+        );
 
-        });
-
-
-        markers[station.id] = marker;
+        markers[station.id] =
+            marker;
 
     });
 
@@ -795,7 +903,6 @@ function renderMarkers() {
 function renderStations() {
 
     stationList.innerHTML = "";
-
 
     if (filteredStations.length === 0) {
 
@@ -853,39 +960,50 @@ function renderStations() {
         renderMarkers();
 
         return;
-    }
 
+    }
 
     filteredStations.forEach(station => {
 
         const card =
             document.createElement("div");
 
-        card.className = "station-card";
+        card.className =
+            "station-card";
 
-        card.dataset.id = station.id;
+        card.dataset.id =
+            station.id;
 
+        let statusClass =
+            "available";
 
-        let statusClass = "available";
-        let statusText = "AVAILABLE";
+        let statusText =
+            "AVAILABLE";
 
         if (station.available === 0) {
 
-            statusClass = "full";
-            statusText = "FULL";
+            statusClass =
+                "full";
+
+            statusText =
+                "FULL";
 
         }
+
         else if (station.available <= 2) {
 
-            statusClass = "limited";
-            statusText = "LIMITED";
+            statusClass =
+                "limited";
+
+            statusText =
+                "LIMITED";
 
         }
 
-
         const percentage =
-            (station.available / station.total) * 100;
-
+            (station.available /
+                station.total) *
+            100;
 
         card.innerHTML = `
 
@@ -961,7 +1079,8 @@ function renderStations() {
                         style="
                             width:${percentage}%;
                             background:
-                            ${station.available === 0
+                            ${
+                                station.available === 0
                                 ? "var(--red)"
                                 : station.available <= 2
                                     ? "var(--yellow)"
@@ -1000,15 +1119,18 @@ function renderStations() {
                 <div class="station-actions">
 
                     <button
-                        class="favorite-btn
-                        ${station.favorite ? "active" : ""}"
+                        class="
+                            favorite-btn
+                            ${station.favorite ? "active" : ""}
+                        "
                         onclick="
                             event.stopPropagation();
                             toggleFavorite(${station.id})
                         "
                     >
                         <i class="
-                            ${station.favorite
+                            ${
+                                station.favorite
                                 ? "fa-solid"
                                 : "fa-regular"
                             }
@@ -1030,23 +1152,39 @@ function renderStations() {
 
         `;
 
+        card.addEventListener(
+            "click",
+            () => {
 
-        card.addEventListener("click", () => {
+                openStation(
+                    station.id
+                );
 
-            openStation(station.id);
+            }
+        );
 
-        });
+        card
+            .querySelector(
+                ".station-book"
+            )
+            .addEventListener(
+                "click",
+                event => {
 
-        card.querySelector(".station-book").addEventListener("click", event => {
-            event.stopPropagation();
-            startBooking(station.id);
-        });
+                    event.stopPropagation();
 
+                    startBooking(
+                        station.id
+                    );
 
-        stationList.appendChild(card);
+                }
+            );
+
+        stationList.appendChild(
+            card
+        );
 
     });
-
 
     updateStats();
 
@@ -1062,12 +1200,14 @@ function renderStations() {
 function openStation(id) {
 
     const station =
-        stations.find(s => s.id === id);
+        stations.find(
+            s => s.id === id
+        );
 
     if (!station) return;
 
-    selectedStation = station;
-
+    selectedStation =
+        station;
 
     stationDetails.innerHTML = `
 
@@ -1112,7 +1252,9 @@ function openStation(id) {
                 <span>Available</span>
 
                 <strong style="
-                    color:${station.available === 0
+                    color:
+                    ${
+                        station.available === 0
                         ? "var(--red)"
                         : "var(--green)"
                     };
@@ -1152,9 +1294,7 @@ function openStation(id) {
             </h4>
 
             <div class="charger-list">
-
                 ${createChargers(station)}
-
             </div>
 
         </div>
@@ -1167,9 +1307,7 @@ function openStation(id) {
             </h4>
 
             <div class="amenity-grid">
-
                 ${createAmenities(station)}
-
             </div>
 
         </div>
@@ -1293,24 +1431,51 @@ function openStation(id) {
 
     `;
 
-    stationDetails.querySelector(".drawer-directions")?.addEventListener("click", () => {
-        getDirections(station.id);
-    });
+    stationDetails
+        .querySelector(
+            ".drawer-directions"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
 
-    stationDetails.querySelector(".drawer-book")?.addEventListener("click", () => {
-        startBooking(station.id);
-    });
+                getDirections(
+                    station.id
+                );
 
+            }
+        );
 
-    stationDrawer.classList.add("open");
+    stationDetails
+        .querySelector(
+            ".drawer-book"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
 
-    drawerOverlay.classList.add("open");
+                startBooking(
+                    station.id
+                );
 
+            }
+        );
+
+    stationDrawer.classList.add(
+        "open"
+    );
+
+    drawerOverlay.classList.add(
+        "open"
+    );
 
     if (markers[id]) {
 
         map.setView(
-            [station.lat, station.lng],
+            [
+                station.lat,
+                station.lng
+            ],
             15,
             {
                 animate: true
@@ -1321,8 +1486,9 @@ function openStation(id) {
 
     }
 
-
-    highlightCard(id);
+    highlightCard(
+        id
+    );
 
 }
 
@@ -1334,11 +1500,18 @@ function openStation(id) {
 function createChargers(station) {
 
     const count =
-        Math.min(station.total, 4);
+        Math.min(
+            station.total,
+            4
+        );
 
     let html = "";
 
-    for (let i = 1; i <= count; i++) {
+    for (
+        let i = 1;
+        i <= count;
+        i++
+    ) {
 
         const active =
             i <= station.available;
@@ -1361,22 +1534,29 @@ function createChargers(station) {
 
                         <div class="charger-meta">
                             ${station.connector}
-                            • ${station.power} kW
+                            •
+                            ${station.power} kW
                         </div>
 
                     </div>
 
                 </div>
 
-                <div class="charger-status"
+                <div
+                    class="charger-status"
                     style="
-                        color:${active
+                        color:
+                        ${
+                            active
                             ? "var(--green)"
                             : "var(--red)"
                         };
                     "
                 >
-                    ${active ? "AVAILABLE" : "BUSY"}
+                    ${active
+                        ? "AVAILABLE"
+                        : "BUSY"
+                    }
                 </div>
 
             </div>
@@ -1420,181 +1600,488 @@ function createAmenities(station) {
 
     };
 
-
     return station.amenities
-        .map(a => {
+        .map(
+            a => {
 
-            const item = names[a];
+                const item =
+                    names[a];
 
-            if (!item) return "";
+                if (!item) return "";
 
-            return `
+                return `
 
-                <div class="amenity">
+                    <div class="amenity">
 
-                    <i class="fa-solid ${item[0]}"
-                       style="
-                           color:var(--green);
-                           margin-right:5px;
-                       "
-                    ></i>
+                        <i class="
+                            fa-solid
+                            ${item[0]}
+                        "
+                        style="
+                            color:var(--green);
+                            margin-right:5px;
+                        ">
+                        </i>
 
-                    ${item[1]}
+                        ${item[1]}
 
-                </div>
+                    </div>
 
-            `;
+                `;
 
-        })
+            }
+        )
         .join("");
 
 }
 
 
 /* =========================================================
-   NEARBY RECOMMENDATIONS
+   RECOMMENDATIONS
    ========================================================= */
 
-function createRecommendations(station) {
+function createRecommendations(
+    station
+) {
 
     const places = [
-        ["fa-mug-hot", "Cafe", `Brew & Bean · ${station.distance < 4 ? "3" : "6"} min walk`],
-        ["fa-hotel", "Hotel", "Comfort stay & lobby workspace nearby"],
-        ["fa-store", "Nearby mall", "Shopping, dining and essentials" ]
+
+        [
+            "fa-mug-hot",
+            "Cafe",
+            `
+                Brew & Bean ·
+                ${
+                    station.distance < 4
+                    ? "3"
+                    : "6"
+                }
+                min walk
+            `
+        ],
+
+        [
+            "fa-hotel",
+            "Hotel",
+            "Comfort stay & lobby workspace nearby"
+        ],
+
+        [
+            "fa-store",
+            "Nearby mall",
+            "Shopping, dining and essentials"
+        ]
+
     ];
 
-    return places.map(place => `
+    return places
+        .map(
+            place => `
 
-        <div class="recommendation-place">
-            <i class="fa-solid ${place[0]}"></i>
-            <div>
-                <strong>${place[1]}</strong>
-                <span>${place[2]}</span>
-            </div>
-        </div>
+                <div class="recommendation-place">
 
-    `).join("");
+                    <i class="
+                        fa-solid
+                        ${place[0]}
+                    "></i>
+
+                    <div>
+
+                        <strong>
+                            ${place[1]}
+                        </strong>
+
+                        <span>
+                            ${place[2]}
+                        </span>
+
+                    </div>
+
+                </div>
+
+            `
+        )
+        .join("");
 
 }
 
 
 /* =========================================================
-   TRAVEL, ROUTES, RATINGS & CONTACT
+   TRAVEL / RATINGS / SUPPORT
    ========================================================= */
 
-function getWaitingTime(station) {
+function getWaitingTime(
+    station
+) {
 
-    if (station.available === 0) return "25–35 min";
-    if (station.available <= 2) return "10–15 min";
+    if (
+        station.available === 0
+    ) {
+        return "25–35 min";
+    }
+
+    if (
+        station.available <= 2
+    ) {
+        return "10–15 min";
+    }
+
     return "No expected wait";
 
 }
 
 
-function getTravelTime(station) {
+function getTravelTime(
+    station
+) {
 
-    const distance = userLocation
-        ? calculateDistanceKm(userLocation.lat, userLocation.lng, station.lat, station.lng)
+    const distance =
+        userLocation
+        ? calculateDistanceKm(
+            userLocation.lat,
+            userLocation.lng,
+            station.lat,
+            station.lng
+        )
         : station.distance;
-    const minutes = Math.max(4, Math.round((distance / 28) * 60));
+
+    const minutes =
+        Math.max(
+            4,
+            Math.round(
+                (distance / 28) * 60
+            )
+        );
 
     return `${minutes} min`;
 
 }
 
 
-function calculateDistanceKm(lat1, lng1, lat2, lng2) {
+function calculateDistanceKm(
+    lat1,
+    lng1,
+    lat2,
+    lng2
+) {
 
-    const toRadians = value => value * Math.PI / 180;
-    const dLat = toRadians(lat2 - lat1);
-    const dLng = toRadians(lng2 - lng1);
-    const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-        Math.sin(dLng / 2) ** 2;
+    const toRadians =
+        value =>
+            value *
+            Math.PI /
+            180;
 
-    return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const dLat =
+        toRadians(
+            lat2 - lat1
+        );
+
+    const dLng =
+        toRadians(
+            lng2 - lng1
+        );
+
+    const a =
+        Math.sin(
+            dLat / 2
+        ) ** 2 +
+        Math.cos(
+            toRadians(lat1)
+        ) *
+        Math.cos(
+            toRadians(lat2)
+        ) *
+        Math.sin(
+            dLng / 2
+        ) ** 2;
+
+    return (
+        6371 *
+        2 *
+        Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1 - a)
+        )
+    );
 
 }
 
 
-function createTravelDetails(station) {
+function createTravelDetails(
+    station
+) {
 
-    const eta = getTravelTime(station);
-    const wait = getWaitingTime(station);
+    const eta =
+        getTravelTime(station);
+
+    const wait =
+        getWaitingTime(station);
 
     return `
+
         <div class="travel-overview">
-            <div class="travel-stat"><span>Estimated drive</span><strong>${eta}</strong></div>
-            <div class="travel-stat"><span>Expected wait</span><strong>${wait}</strong></div>
+
+            <div class="travel-stat">
+
+                <span>
+                    Estimated drive
+                </span>
+
+                <strong>
+                    ${eta}
+                </strong>
+
+            </div>
+
+            <div class="travel-stat">
+
+                <span>
+                    Expected wait
+                </span>
+
+                <strong>
+                    ${wait}
+                </strong>
+
+            </div>
+
         </div>
-        <button class="route-choice recommended" onclick="startSuggestedRoute(${station.id}, 'best')">
-            <div><strong>Best route · recommended</strong><span>Fastest drive estimate · ${eta}</span></div>
+
+
+        <button
+            class="route-choice recommended"
+            onclick="
+                startSuggestedRoute(
+                    ${station.id},
+                    'best'
+                )
+            "
+        >
+            <div>
+
+                <strong>
+                    Best route · recommended
+                </strong>
+
+                <span>
+                    Fastest drive estimate · ${eta}
+                </span>
+
+            </div>
+
             <i class="fa-solid fa-route"></i>
+
         </button>
-        <button class="route-choice" onclick="startSuggestedRoute(${station.id}, 'alternate')">
-            <div><strong>Alternate route</strong><span>May be useful if traffic is heavy</span></div>
+
+
+        <button
+            class="route-choice"
+            onclick="
+                startSuggestedRoute(
+                    ${station.id},
+                    'alternate'
+                )
+            "
+        >
+            <div>
+
+                <strong>
+                    Alternate route
+                </strong>
+
+                <span>
+                    May be useful if traffic is heavy
+                </span>
+
+            </div>
+
             <i class="fa-solid fa-arrow-right"></i>
+
         </button>
+
     `;
 
 }
 
 
-function getStationRating(id) {
+function getStationRating(
+    id
+) {
 
-    if (!currentUser) return 0;
-    const ratings = JSON.parse(localStorage.getItem("voltmap-station-ratings") || "{}");
-    return ratings[`${currentUser.email}:${id}`] || 0;
+    if (!currentUser)
+        return 0;
+
+    const ratings =
+        JSON.parse(
+            localStorage.getItem(
+                "voltmap-station-ratings"
+            ) || "{}"
+        );
+
+    return ratings[
+        `${currentUser.email}:${id}`
+    ] || 0;
 
 }
 
 
-function createStationRating(station) {
+function createStationRating(
+    station
+) {
 
-    const rating = getStationRating(station.id);
+    const rating =
+        getStationRating(
+            station.id
+        );
 
     return `
+
         <div class="station-rating">
-            <span>${rating ? `Your rating: ${rating}/5` : `Community rating: ${station.rating}/5`}</span>
+
+            <span>
+                ${
+                    rating
+                    ? `Your rating: ${rating}/5`
+                    : `Community rating: ${station.rating}/5`
+                }
+            </span>
+
             <div>
-                ${[1, 2, 3, 4, 5].map(star => `<button onclick="rateStation(${station.id}, ${star})" aria-label="Rate ${star} stars">${star <= rating ? "★" : "☆"}</button>`).join("")}
+
+                ${
+                    [1, 2, 3, 4, 5]
+                    .map(
+                        star =>
+                            `
+                                <button
+                                    onclick="
+                                        rateStation(
+                                            ${station.id},
+                                            ${star}
+                                        )
+                                    "
+                                    aria-label="
+                                        Rate ${star} stars
+                                    "
+                                >
+                                    ${
+                                        star <= rating
+                                        ? "★"
+                                        : "☆"
+                                    }
+                                </button>
+                            `
+                    )
+                    .join("")
+                }
+
             </div>
+
         </div>
+
     `;
 
 }
 
 
-function rateStation(id, rating) {
+function rateStation(
+    id,
+    rating
+) {
 
-    if (!currentUser) return;
+    if (!currentUser)
+        return;
 
-    const ratings = JSON.parse(localStorage.getItem("voltmap-station-ratings") || "{}");
-    ratings[`${currentUser.email}:${id}`] = rating;
-    localStorage.setItem("voltmap-station-ratings", JSON.stringify(ratings));
+    const ratings =
+        JSON.parse(
+            localStorage.getItem(
+                "voltmap-station-ratings"
+            ) || "{}"
+        );
 
-    syncToBackend(`/stations/${id}/ratings`, {
-        method: "POST",
-        body: JSON.stringify({ email: currentUser.email, rating })
-    });
+    ratings[
+        `${currentUser.email}:${id}`
+    ] = rating;
+
+    localStorage.setItem(
+        "voltmap-station-ratings",
+        JSON.stringify(ratings)
+    );
+
+    syncToBackend(
+        `/stations/${id}/ratings`,
+        {
+            method: "POST",
+            body: JSON.stringify({
+                email: currentUser.email,
+                rating
+            })
+        }
+    );
 
     openStation(id);
-    showToast("Station rating saved", `You rated this station ${rating}/5.`);
+
+    showToast(
+        "Station rating saved",
+        `You rated this station ${rating}/5.`
+    );
 
 }
 
 
-function createStationContact(station) {
+function createStationContact(
+    station
+) {
 
-    const contactCode = String(station.id).padStart(3, "0");
+    const contactCode =
+        String(station.id)
+            .padStart(
+                3,
+                "0"
+            );
 
     return `
+
         <div class="station-contact">
-            <strong style="color:var(--text)">Station admin desk</strong><br>
-            <i class="fa-solid fa-phone"></i> <a href="tel:+918055550${contactCode}">+91 80 5555 0${contactCode}</a><br>
-            <i class="fa-regular fa-envelope"></i> <a href="mailto:station${contactCode}@voltmap.demo">station${contactCode}@voltmap.demo</a><br>
-            <span>For charger access, availability, or site support.</span>
+
+            <strong style="
+                color:var(--text)
+            ">
+                Station admin desk
+            </strong>
+
+            <br>
+
+            <i class="fa-solid fa-phone"></i>
+
+            <a
+                href="
+                    tel:+918055550${contactCode}
+                "
+            >
+                +91 80 5555 0${contactCode}
+            </a>
+
+            <br>
+
+            <i class="fa-regular fa-envelope"></i>
+
+            <a
+                href="
+                    mailto:station${contactCode}@voltmap.demo
+                "
+            >
+                station${contactCode}@voltmap.demo
+            </a>
+
+            <br>
+
+            <span>
+                For charger access, availability, or site support.
+            </span>
+
         </div>
+
     `;
 
 }
@@ -1604,17 +2091,34 @@ function createStationContact(station) {
    BOOKING
    ========================================================= */
 
-function startBooking(id) {
+function startBooking(
+    id
+) {
 
     if (!currentUser) {
-        document.getElementById("authOverlay").classList.remove("hidden");
+
+        document
+            .getElementById(
+                "authOverlay"
+            )
+            .classList
+            .remove(
+                "hidden"
+            );
+
         return;
+
     }
 
     const station =
-        stations.find(s => s.id === id);
+        stations.find(
+            s => s.id === id
+        );
 
-    if (!station || station.available === 0) {
+    if (
+        !station ||
+        station.available === 0
+    ) {
 
         showToast(
             "Unavailable",
@@ -1625,17 +2129,23 @@ function startBooking(id) {
 
     }
 
-    selectedStation = station;
+    selectedStation =
+        station;
 
-    selectedCharger = null;
+    selectedCharger =
+        null;
 
-    bookingDraft = {};
+    bookingDraft =
+        {};
 
-    bookingStep = 1;
+    bookingStep =
+        1;
 
     renderBooking();
 
-    bookingModal.classList.add("open");
+    bookingModal.classList.add(
+        "open"
+    );
 
 }
 
@@ -1647,7 +2157,9 @@ function startBooking(id) {
 function renderBooking() {
 
     const content =
-        document.getElementById("bookingContent");
+        document.getElementById(
+            "bookingContent"
+        );
 
     updateBookingProgress();
 
@@ -1686,8 +2198,9 @@ function renderBooking() {
 
     }
 
-
-    else if (bookingStep === 2) {
+    else if (
+        bookingStep === 2
+    ) {
 
         content.innerHTML = `
 
@@ -1741,8 +2254,9 @@ function renderBooking() {
 
     }
 
-
-    else if (bookingStep === 3) {
+    else if (
+        bookingStep === 3
+    ) {
 
         content.innerHTML = `
 
@@ -1761,7 +2275,9 @@ function renderBooking() {
 
                     Vehicle
 
-                    <select id="vehicleSelect">
+                    <select
+                        id="vehicleSelect"
+                    >
 
                         <option>
                             Tata Nexon EV
@@ -1810,13 +2326,15 @@ function renderBooking() {
 
     }
 
-
     else {
 
-        const date = bookingDraft.date || getToday();
+        const date =
+            bookingDraft.date ||
+            getToday();
 
-        const time = bookingDraft.time || "19:30";
-
+        const time =
+            bookingDraft.time ||
+            "19:30";
 
         content.innerHTML = `
 
@@ -1833,7 +2351,9 @@ function renderBooking() {
 
                 <div class="summary-line">
 
-                    <span>Station</span>
+                    <span>
+                        Station
+                    </span>
 
                     <strong>
                         ${selectedStation.name}
@@ -1844,7 +2364,9 @@ function renderBooking() {
 
                 <div class="summary-line">
 
-                    <span>Charger</span>
+                    <span>
+                        Charger
+                    </span>
 
                     <strong>
                         ${selectedCharger?.name || "CCS2"}
@@ -1855,7 +2377,9 @@ function renderBooking() {
 
                 <div class="summary-line">
 
-                    <span>Date</span>
+                    <span>
+                        Date
+                    </span>
 
                     <strong>
                         ${date}
@@ -1866,7 +2390,9 @@ function renderBooking() {
 
                 <div class="summary-line">
 
-                    <span>Time</span>
+                    <span>
+                        Time
+                    </span>
 
                     <strong>
                         ${time}
@@ -1877,10 +2403,15 @@ function renderBooking() {
 
                 <div class="summary-line">
 
-                    <span>Vehicle</span>
+                    <span>
+                        Vehicle
+                    </span>
 
                     <strong>
-                        ${bookingDraft.vehicle || "Tata Nexon EV"}
+                        ${
+                            bookingDraft.vehicle ||
+                            "Tata Nexon EV"
+                        }
                     </strong>
 
                 </div>
@@ -1888,7 +2419,9 @@ function renderBooking() {
 
                 <div class="summary-line">
 
-                    <span>Estimated energy</span>
+                    <span>
+                        Estimated energy
+                    </span>
 
                     <strong>
                         18.4 kWh
@@ -1897,9 +2430,14 @@ function renderBooking() {
                 </div>
 
 
-                <div class="summary-line summary-total">
+                <div class="
+                    summary-line
+                    summary-total
+                ">
 
-                    <span>Estimated cost</span>
+                    <span>
+                        Estimated cost
+                    </span>
 
                     <strong>
                         ₹${Math.round(
@@ -1932,16 +2470,52 @@ function renderBooking() {
 
 function bindBookingStepEvents() {
 
-    const content = document.getElementById("bookingContent");
+    const content =
+        document.getElementById(
+            "bookingContent"
+        );
 
-    content.querySelectorAll(".booking-charger").forEach(button => {
-        button.addEventListener("click", () => {
-            selectCharger(button, Number(button.dataset.charger));
-        });
-    });
+    content
+        .querySelectorAll(
+            ".booking-charger"
+        )
+        .forEach(
+            button => {
 
-    content.querySelector(".booking-next")?.addEventListener("click", bookingNext);
-    content.querySelector(".open-payment")?.addEventListener("click", openPayment);
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        selectCharger(
+                            button,
+                            Number(
+                                button.dataset.charger
+                            )
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+    content
+        .querySelector(
+            ".booking-next"
+        )
+        ?.addEventListener(
+            "click",
+            bookingNext
+        );
+
+    content
+        .querySelector(
+            ".open-payment"
+        )
+        ?.addEventListener(
+            "click",
+            openPayment
+        );
 
 }
 
@@ -1953,11 +2527,18 @@ function bindBookingStepEvents() {
 function createBookingChargers() {
 
     const count =
-        Math.min(selectedStation.available, 4);
+        Math.min(
+            selectedStation.available,
+            4
+        );
 
     let html = "";
 
-    for (let i = 1; i <= count; i++) {
+    for (
+        let i = 1;
+        i <= count;
+        i++
+    ) {
 
         html += `
 
@@ -1988,24 +2569,36 @@ function createBookingChargers() {
 }
 
 
-function selectCharger(button, number) {
+function selectCharger(
+    button,
+    number
+) {
 
     document
-        .querySelectorAll(".charger-choice button")
-        .forEach(btn =>
-            btn.classList.remove("selected")
+        .querySelectorAll(
+            ".charger-choice button"
+        )
+        .forEach(
+            btn =>
+                btn.classList.remove(
+                    "selected"
+                )
         );
 
-    button.classList.add("selected");
-
+    button.classList.add(
+        "selected"
+    );
 
     selectedCharger = {
 
-        name: `Charger ${number}`,
+        name:
+            `Charger ${number}`,
 
-        connector: selectedStation.connector,
+        connector:
+            selectedStation.connector,
 
-        power: selectedStation.power
+        power:
+            selectedStation.power
 
     };
 
@@ -2018,7 +2611,10 @@ function selectCharger(button, number) {
 
 function bookingNext() {
 
-    if (bookingStep === 1 && !selectedCharger) {
+    if (
+        bookingStep === 1 &&
+        !selectedCharger
+    ) {
 
         showToast(
             "Select charger",
@@ -2029,17 +2625,24 @@ function bookingNext() {
 
     }
 
-
-    if (bookingStep === 2) {
+    if (
+        bookingStep === 2
+    ) {
 
         const date =
-            document.getElementById("bookingDate");
+            document.getElementById(
+                "bookingDate"
+            );
 
         const time =
-            document.getElementById("bookingTime");
+            document.getElementById(
+                "bookingTime"
+            );
 
-
-        if (!date?.value || !time?.value) {
+        if (
+            !date?.value ||
+            !time?.value
+        ) {
 
             showToast(
                 "Missing information",
@@ -2050,18 +2653,32 @@ function bookingNext() {
 
         }
 
-        bookingDraft.date = date.value;
-        bookingDraft.time = time.value;
+        bookingDraft.date =
+            date.value;
+
+        bookingDraft.time =
+            time.value;
 
     }
 
+    if (
+        bookingStep === 3
+    ) {
 
-    if (bookingStep === 3) {
+        const vehicle =
+            document.getElementById(
+                "vehicleSelect"
+            );
 
-        const vehicle = document.getElementById("vehicleSelect");
-        const vehicleNumber = document.getElementById("vehicleNumber");
+        const vehicleNumber =
+            document.getElementById(
+                "vehicleNumber"
+            );
 
-        if (!vehicle || !vehicleNumber?.value.trim()) {
+        if (
+            !vehicle ||
+            !vehicleNumber?.value.trim()
+        ) {
 
             showToast(
                 "Vehicle number required",
@@ -2072,11 +2689,15 @@ function bookingNext() {
 
         }
 
-        bookingDraft.vehicle = vehicle.value;
-        bookingDraft.vehicleNumber = vehicleNumber.value.trim().toUpperCase();
+        bookingDraft.vehicle =
+            vehicle.value;
+
+        bookingDraft.vehicleNumber =
+            vehicleNumber.value
+                .trim()
+                .toUpperCase();
 
     }
-
 
     bookingStep++;
 
@@ -2086,311 +2707,2147 @@ function bookingNext() {
 
 
 /* =========================================================
-   CONFIRM BOOKING
+   PAYMENT MODAL
+   IMPORTANT FIX
    ========================================================= */
 
-function openPayment() {
+function ensurePaymentModal() {
 
-    if (!bookingDraft.vehicleNumber) {
-        showToast("Vehicle number required", "Enter your vehicle number before payment.");
-        return;
+    let modal =
+        document.getElementById(
+            "paymentModal"
+        );
+
+    if (modal) {
+
+        return modal;
+
     }
 
-    bookingModal.classList.remove("open");
-    renderPayment();
-    document.getElementById("paymentModal").classList.add("open");
+    modal =
+        document.createElement(
+            "div"
+        );
 
-}
+    modal.id =
+        "paymentModal";
+
+    modal.className =
+        "modal-overlay";
+
+    modal.innerHTML = `
+
+        <div
+            class="modal payment-modal"
+            style="
+                position:relative;
+            "
+        >
+
+            <button
+                class="modal-close"
+                id="paymentCloseBtn"
+                type="button"
+                style="
+                    position:absolute;
+                    top:17px;
+                    right:17px;
+                    z-index:5;
+                "
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
 
 
-function updateBookingProgress() {
+            <div class="booking-progress">
 
-    document
-        .querySelectorAll(".booking-progress .progress-step")
-        .forEach((step, index) => {
-            const stepNumber = index + 1;
-            step.classList.toggle("active", stepNumber === bookingStep);
-            step.classList.toggle("complete", stepNumber < bookingStep);
-        });
+                <div class="
+                    progress-step
+                    complete
+                ">
+                    <span>1</span>
+                    Details
+                </div>
 
-    document
-        .querySelectorAll(".booking-progress .progress-line")
-        .forEach((line, index) => {
-            line.classList.toggle("complete", index + 1 < bookingStep);
-        });
+                <div class="
+                    progress-line
+                    complete
+                "></div>
 
-}
+                <div class="
+                    progress-step
+                    complete
+                ">
+                    <span>2</span>
+                    Review
+                </div>
+
+                <div class="
+                    progress-line
+                    complete
+                "></div>
+
+                <div class="
+                    progress-step
+                    active
+                ">
+                    <span>3</span>
+                    Payment
+                </div>
+
+                <div class="
+                    progress-line
+                "></div>
+
+                <div class="
+                    progress-step
+                ">
+                    <span>4</span>
+                    Confirm
+                </div>
+
+            </div>
 
 
-function renderPayment() {
+            <div id="paymentContent"></div>
 
-    const amount = Math.round(18.4 * selectedStation.price);
-    const paymentContent = document.getElementById("paymentContent");
-
-    paymentContent.innerHTML = `
-
-        <div class="payment-total">
-            <span>${selectedStation.name}<br><small>${selectedCharger?.name || "Charger"} · ${bookingDraft.date}, ${bookingDraft.time}</small></span>
-            <strong>₹${amount}</strong>
         </div>
-
-        <div class="payment-methods">
-            <button type="button" class="payment-method ${selectedPaymentMethod === "qr" ? "active" : ""}" data-payment-method="qr"><i class="fa-solid fa-qrcode"></i>QR / UPI</button>
-            <button type="button" class="payment-method ${selectedPaymentMethod === "upi" ? "active" : ""}" data-payment-method="upi"><i class="fa-solid fa-mobile-screen"></i>UPI ID</button>
-            <button type="button" class="payment-method ${selectedPaymentMethod === "card" ? "active" : ""}" data-payment-method="card"><i class="fa-regular fa-credit-card"></i>Card</button>
-        </div>
-
-        <div class="payment-method-content">
-            ${createPaymentMethodContent(amount)}
-        </div>
-
-        <p class="payment-note">This demo confirms the payment in the interface only. Connect a verified payment provider and server-side credentials before taking live payments.</p>
-
-        <button type="button" class="btn-primary full-btn" id="payButton">
-            <i class="fa-solid fa-lock"></i> Pay ₹${amount} & reserve
-        </button>
 
     `;
 
-    paymentContent.querySelectorAll("[data-payment-method]").forEach(button => {
-        button.addEventListener("click", () => selectPaymentMethod(button.dataset.paymentMethod));
-    });
-
-    paymentContent.querySelector("#payButton").addEventListener("click", processPayment);
-
-}
+    document.body.appendChild(
+        modal
+    );
 
 
-function createPaymentMethodContent(amount) {
+    modal
+        .addEventListener(
+            "click",
+            event => {
 
-    if (selectedPaymentMethod === "card") {
-        return `
-            <label class="payment-field">Card number<input id="cardNumber" inputmode="numeric" placeholder="1234 5678 9012 3456"></label>
-            <label class="payment-field">Name on card<input id="cardName" placeholder="Cardholder name"></label>
-        `;
-    }
+                if (
+                    event.target ===
+                    modal
+                ) {
 
-    if (selectedPaymentMethod === "upi") {
-        return `
-            <label class="payment-field">UPI ID<input id="upiId" placeholder="name@bank"></label>
-            <p class="payment-note">You will approve the request in your UPI app.</p>
-        `;
-    }
+                    modal.classList.remove(
+                        "open"
+                    );
 
-    return `
-        <div class="qr-payment">
-            <svg class="qr-code" viewBox="0 0 21 21" aria-label="Demo QR payment code" role="img">
-                <rect width="21" height="21" fill="#fff"/>
-                <g fill="#071018"><path d="M1 1h6v6H1zm1 1v4h4V2zm11-1h7v6h-7zm1 1v4h4V2zM1 13h6v7H1zm1 1v5h4v-5zM9 1h2v2H9zm2 2h2v2h-2zm-2 3h4v2H9zm5 1h2v2h-2zm3 1h3v2h-3zM9 9h2v2H9zm3 0h2v4h-2zm4 2h4v2h-4zM8 12h3v2H8zm4 2h2v2h-2zm3-1h2v4h-2zm3 3h2v2h-2zM8 16h2v4H8zm3 2h3v2h-3z"/></g>
-            </svg>
-            <div><strong>Scan with any UPI app</strong><p>Amount: ₹${amount}<br>Use your preferred UPI app to complete the payment.</p></div>
-        </div>
-    `;
+                }
 
-}
-
-
-function selectPaymentMethod(method) {
-
-    selectedPaymentMethod = method;
-    renderPayment();
-
-}
-
-
-function processPayment() {
-
-    if (selectedPaymentMethod === "upi" && !document.getElementById("upiId")?.value.trim()) {
-        showToast("UPI ID required", "Enter a UPI ID to continue.");
-        return;
-    }
-
-    if (selectedPaymentMethod === "card") {
-        const card = document.getElementById("cardNumber")?.value.replace(/\s/g, "");
-        if (!card || card.length < 12 || !document.getElementById("cardName")?.value.trim()) {
-            showToast("Card details required", "Enter a valid card number and cardholder name.");
-            return;
-        }
-    }
-
-    const bookingId = "VM-" + new Date().getFullYear() + "-" + Math.floor(100000 + Math.random() * 900000);
-    const amount = Math.round(18.4 * selectedStation.price);
-    const order = {
-        id: bookingId,
-        userEmail: currentUser.email,
-        stationName: selectedStation.name,
-        chargerName: selectedCharger?.name || "Charger",
-        date: bookingDraft.date,
-        time: bookingDraft.time,
-        vehicleNumber: bookingDraft.vehicleNumber,
-        amount,
-        paymentMethod: selectedPaymentMethod.toUpperCase(),
-        status: "Paid & confirmed",
-        rating: null,
-        createdAt: new Date().toISOString()
-    };
-
-    const orders = JSON.parse(localStorage.getItem("voltmap-orders") || "[]");
-    orders.unshift(order);
-    localStorage.setItem("voltmap-orders", JSON.stringify(orders));
-
-    syncToBackend("/orders", {
-        method: "POST",
-        body: JSON.stringify(order)
-    });
-
-    selectedStation.available = Math.max(0, selectedStation.available - 1);
-    document.getElementById("paymentModal").classList.remove("open");
-    showConfirmation(bookingId);
-    renderStations();
-
-}
-
-function confirmBooking() {
-
-    const bookingId =
-        "VM-" +
-        new Date().getFullYear() +
-        "-" +
-        Math.floor(
-            100000 +
-            Math.random() * 900000
+            }
         );
 
 
-    selectedStation.available =
-        Math.max(
-            0,
-            selectedStation.available - 1
+    document
+        .getElementById(
+            "paymentCloseBtn"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                modal.classList.remove(
+                    "open"
+                );
+
+                bookingModal.classList.add(
+                    "open"
+                );
+
+            }
         );
 
 
-    bookingModal.classList.remove("open");
-
-
-    showConfirmation(bookingId);
-
-    renderStations();
+    return modal;
 
 }
 
 
 /* =========================================================
-   CONFIRMATION
+   PAYMENT
    ========================================================= */
 
-function showConfirmation(bookingId) {
+function openPayment() {
+
+    if (
+        !bookingDraft.vehicleNumber
+    ) {
+
+        showToast(
+            "Vehicle number required",
+            "Enter your vehicle number before payment."
+        );
+
+        return;
+
+    }
+
+    ensurePaymentModal();
+
+    bookingModal.classList.remove(
+        "open"
+    );
+
+    renderPayment();
+
+    document
+        .getElementById(
+            "paymentModal"
+        )
+        .classList.add(
+            "open"
+        );
+
+}
+
+
+/* =========================================================
+   UPDATE BOOKING PROGRESS
+   ========================================================= */
+
+function updateBookingProgress() {
+
+    document
+        .querySelectorAll(
+            ".booking-progress .progress-step"
+        )
+        .forEach(
+            (step, index) => {
+
+                const stepNumber =
+                    index + 1;
+
+                step.classList.toggle(
+                    "active",
+                    stepNumber ===
+                    bookingStep
+                );
+
+                step.classList.toggle(
+                    "complete",
+                    stepNumber <
+                    bookingStep
+                );
+
+            }
+        );
+
+
+    document
+        .querySelectorAll(
+            ".booking-progress .progress-line"
+        )
+        .forEach(
+            (line, index) => {
+
+                line.classList.toggle(
+                    "complete",
+                    index + 1 <
+                    bookingStep
+                );
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   PAYMENT RENDER
+   ========================================================= */
+
+function renderPayment() {
+
+    if (!selectedStation) {
+
+        return;
+
+    }
+
+    const amount =
+        Math.round(
+            18.4 *
+            selectedStation.price
+        );
+
+    currentPaymentAmount =
+        amount;
+
+    const paymentModal =
+        ensurePaymentModal();
+
+    const paymentContent =
+        paymentModal.querySelector(
+            "#paymentContent"
+        );
+
+    if (!paymentContent) {
+
+        console.error(
+            "Payment content element not found."
+        );
+
+        return;
+
+    }
+
+
+    paymentContent.innerHTML = `
+
+        <h2 class="booking-title">
+            Complete payment
+        </h2>
+
+
+        <p class="booking-subtitle">
+            Choose your preferred payment method.
+        </p>
+
+
+        <div
+            class="payment-total"
+            style="
+                display:flex;
+                justify-content:space-between;
+                gap:15px;
+                align-items:center;
+                padding:15px;
+                margin-bottom:16px;
+                background:var(--card);
+                border:1px solid var(--border);
+                border-radius:12px;
+            "
+        >
+
+            <span>
+                ${selectedStation.name}
+                <br>
+
+                <small style="
+                    color:var(--muted);
+                ">
+                    ${
+                        selectedCharger?.name ||
+                        "Charger"
+                    }
+                    ·
+                    ${
+                        bookingDraft.date ||
+                        getToday()
+                    }
+                    ,
+                    ${
+                        bookingDraft.time ||
+                        "19:30"
+                    }
+                </small>
+            </span>
+
+            <strong style="
+                font-size:20px;
+            ">
+                ₹${amount}
+            </strong>
+
+        </div>
+
+
+        <div class="payment-methods">
+
+            <button
+                type="button"
+                class="
+                    payment-method
+                    ${selectedPaymentMethod === "qr" ? "active" : ""}
+                "
+                data-payment-method="qr"
+            >
+                <i class="fa-solid fa-qrcode"></i>
+                QR / UPI
+            </button>
+
+
+            <button
+                type="button"
+                class="
+                    payment-method
+                    ${selectedPaymentMethod === "upi" ? "active" : ""}
+                "
+                data-payment-method="upi"
+            >
+                <i class="fa-solid fa-mobile-screen"></i>
+                UPI ID
+            </button>
+
+
+            <button
+                type="button"
+                class="
+                    payment-method
+                    ${selectedPaymentMethod === "card" ? "active" : ""}
+                "
+                data-payment-method="card"
+            >
+                <i class="fa-regular fa-credit-card"></i>
+                Card
+            </button>
+
+
+            <button
+                type="button"
+                class="
+                    payment-method
+                    ${selectedPaymentMethod === "razorpay" ? "active" : ""}
+                "
+                data-payment-method="razorpay"
+            >
+                <i class="fa-solid fa-wallet"></i>
+                Razorpay
+            </button>
+
+        </div>
+
+
+        <div
+            class="payment-method-content"
+            style="
+                margin-top:18px;
+            "
+        >
+
+            ${createPaymentMethodContent(amount)}
+
+        </div>
+
+
+        <p class="payment-note">
+            Demo payment is available immediately.
+            Razorpay requires the backend payment routes
+            and Razorpay credentials.
+        </p>
+
+
+        <button
+            type="button"
+            class="btn-primary full-btn"
+            id="payButton"
+        >
+            ${
+                selectedPaymentMethod === "razorpay"
+                ? `<i class="fa-solid fa-credit-card"></i> Pay ₹${amount} with Razorpay`
+                : `<i class="fa-solid fa-lock"></i> Pay ₹${amount} & reserve`
+            }
+        </button>
+
+
+        <button
+            type="button"
+            class="btn-secondary full-btn"
+            id="backToBookingPayment"
+            style="margin-top:10px;"
+        >
+            <i class="fa-solid fa-arrow-left"></i>
+            Back to booking
+        </button>
+
+    `;
+
+
+    paymentContent
+        .querySelectorAll(
+            "[data-payment-method]"
+        )
+        .forEach(
+            button => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        selectPaymentMethod(
+                            button.dataset
+                                .paymentMethod
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+
+    paymentContent
+        .querySelector(
+            "#payButton"
+        )
+        ?.addEventListener(
+            "click",
+            processPayment
+        );
+
+
+    paymentContent
+        .querySelector(
+            "#backToBookingPayment"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                document
+                    .getElementById(
+                        "paymentModal"
+                    )
+                    ?.classList.remove(
+                        "open"
+                    );
+
+                bookingModal.classList.add(
+                    "open"
+                );
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   PAYMENT METHOD CONTENT
+   ========================================================= */
+
+function createPaymentMethodContent(
+    amount
+) {
+
+    if (
+        selectedPaymentMethod ===
+        "card"
+    ) {
+
+        return `
+
+            <div
+                class="payment-form"
+                style="
+                    display:grid;
+                    gap:12px;
+                "
+            >
+
+                <label class="payment-field">
+
+                    Card number
+
+                    <input
+                        id="cardNumber"
+                        inputmode="numeric"
+                        maxlength="19"
+                        placeholder="
+                            1234 5678 9012 3456
+                        "
+                    >
+
+                </label>
+
+
+                <label class="payment-field">
+
+                    Name on card
+
+                    <input
+                        id="cardName"
+                        placeholder="
+                            Cardholder name
+                        "
+                    >
+
+                </label>
+
+
+                <div
+                    style="
+                        display:grid;
+                        grid-template-columns:
+                            1fr 1fr;
+                        gap:12px;
+                    "
+                >
+
+                    <label class="payment-field">
+
+                        Expiry
+
+                        <input
+                            id="cardExpiry"
+                            placeholder="MM/YY"
+                            maxlength="5"
+                        >
+
+                    </label>
+
+
+                    <label class="payment-field">
+
+                        CVV
+
+                        <input
+                            id="cardCvv"
+                            type="password"
+                            inputmode="numeric"
+                            maxlength="4"
+                            placeholder="•••"
+                        >
+
+                    </label>
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (
+        selectedPaymentMethod ===
+        "upi"
+    ) {
+
+        return `
+
+            <div
+                class="payment-form"
+                style="
+                    display:grid;
+                    gap:12px;
+                "
+            >
+
+                <label class="payment-field">
+
+                    UPI ID
+
+                    <input
+                        id="upiId"
+                        placeholder="
+                            name@bank
+                        "
+                    >
+
+                </label>
+
+
+                <p
+                    class="payment-note"
+                    style="
+                        margin:0;
+                    "
+                >
+                    Enter your UPI ID.
+                    You will approve the payment
+                    in your UPI application.
+                </p>
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (
+        selectedPaymentMethod ===
+        "razorpay"
+    ) {
+
+        return `
+
+            <div
+                style="
+                    padding:20px;
+                    text-align:center;
+                    background:var(--card);
+                    border:1px solid var(--border);
+                    border-radius:12px;
+                "
+            >
+
+                <div
+                    style="
+                        width:62px;
+                        height:62px;
+                        margin:0 auto 14px;
+                        display:grid;
+                        place-items:center;
+                        border-radius:50%;
+                        background:var(--green-soft);
+                        color:var(--green);
+                        font-size:25px;
+                    "
+                >
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+
+
+                <strong>
+                    Secure Razorpay Checkout
+                </strong>
+
+
+                <p
+                    style="
+                        color:var(--muted);
+                        font-size:11px;
+                        line-height:1.6;
+                        margin:8px 0 0;
+                    "
+                >
+                    You will be redirected to
+                    Razorpay's secure checkout
+                    to complete ₹${amount}.
+                </p>
+
+            </div>
+
+        `;
+
+    }
+
+
+    return `
+
+        <div
+            class="qr-payment"
+            style="
+                display:grid;
+                grid-template-columns:
+                    auto 1fr;
+                gap:18px;
+                align-items:center;
+                padding:18px;
+                background:var(--card);
+                border:1px solid var(--border);
+                border-radius:12px;
+            "
+        >
+
+            <div
+                class="qr-container"
+                style="
+                    width:170px;
+                    height:170px;
+                    padding:10px;
+                    background:#ffffff;
+                    border-radius:10px;
+                    display:grid;
+                    place-items:center;
+                    margin:auto;
+                "
+            >
+
+                <svg
+                    class="qr-code"
+                    viewBox="0 0 21 21"
+                    aria-label="
+                        Demo QR payment code
+                    "
+                    role="img"
+                    style="
+                        width:150px;
+                        height:150px;
+                        display:block;
+                    "
+                >
+
+                    <rect
+                        width="21"
+                        height="21"
+                        fill="#fff"
+                    />
+
+                    <g fill="#071018">
+
+                        <path d="
+                            M1 1h6v6H1zm1 1v4h4V2zm11-1h7v6h-7zm1 1v4h4V2z
+                            M1 13h6v7H1zm1 1v5h4v-5zM9 1h2v2H9zm2 2h2v2h-2zm-2
+                            3h4v2H9zm5 1h2v2h-2zm3 1h3v2h-3zM9 9h2v2H9zm3 0h2v4h-2z
+                            m4 2h4v2h-4zM8 12h3v2H8zm4 2h2v2h-2zm3-1h2v4h-2zm3 3h2v2h-2z
+                            M8 16h2v4H8zm3 2h3v2h-3z
+                        " />
+
+                    </g>
+
+                </svg>
+
+            </div>
+
+
+            <div>
+
+                <strong
+                    style="
+                        display:block;
+                        margin-bottom:7px;
+                    "
+                >
+                    Scan with any UPI app
+                </strong>
+
+
+                <p
+                    style="
+                        color:var(--muted);
+                        font-size:11px;
+                        line-height:1.6;
+                        margin:0;
+                    "
+                >
+                    Amount:
+                    <strong>
+                        ₹${amount}
+                    </strong>
+
+                    <br>
+
+                    UPI ID:
+                    <strong>
+                        voltmap@upi
+                    </strong>
+
+                    <br><br>
+
+                    Open Google Pay,
+                    PhonePe,
+                    Paytm or another
+                    UPI application and
+                    scan this QR code.
+                </p>
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =========================================================
+   SELECT PAYMENT METHOD
+   ========================================================= */
+
+function selectPaymentMethod(
+    method
+) {
+
+    selectedPaymentMethod =
+        method;
+
+    renderPayment();
+
+}
+
+
+/* =========================================================
+   PROCESS PAYMENT
+   ========================================================= */
+
+async function processPayment() {
+
+    if (!selectedStation) {
+
+        showToast(
+            "Booking error",
+            "Please select a charging station."
+        );
+
+        return;
+
+    }
+
+
+    if (!currentUser?.email) {
+
+        showToast(
+            "Sign in required",
+            "Please sign in before making a payment."
+        );
+
+        document
+            .getElementById(
+                "paymentModal"
+            )
+            ?.classList.remove(
+                "open"
+            );
+
+        document
+            .getElementById(
+                "authOverlay"
+            )
+            ?.classList
+            .remove(
+                "hidden"
+            );
+
+        return;
+
+    }
+
+
+    if (
+        selectedPaymentMethod ===
+        "razorpay"
+    ) {
+
+        await processRazorpayPayment();
+
+        return;
+
+    }
+
+
+    if (
+        selectedPaymentMethod ===
+        "upi"
+    ) {
+
+        const upi =
+            document
+                .getElementById(
+                    "upiId"
+                )
+                ?.value
+                .trim();
+
+        if (!upi) {
+
+            showToast(
+                "UPI ID required",
+                "Enter your UPI ID to continue."
+            );
+
+            return;
+
+        }
+
+        if (!upi.includes("@")) {
+
+            showToast(
+                "Invalid UPI ID",
+                "Please enter a valid UPI ID."
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    if (
+        selectedPaymentMethod ===
+        "card"
+    ) {
+
+        const card =
+            document
+                .getElementById(
+                    "cardNumber"
+                )
+                ?.value
+                .replace(
+                    /\s/g,
+                    ""
+                );
+
+        const name =
+            document
+                .getElementById(
+                    "cardName"
+                )
+                ?.value
+                .trim();
+
+        const expiry =
+            document
+                .getElementById(
+                    "cardExpiry"
+                )
+                ?.value
+                .trim();
+
+        const cvv =
+            document
+                .getElementById(
+                    "cardCvv"
+                )
+                ?.value
+                .trim();
+
+
+        if (
+            !card ||
+            card.length < 12 ||
+            !name ||
+            !expiry ||
+            !cvv
+        ) {
+
+            showToast(
+                "Card details required",
+                "Enter the complete card details."
+            );
+
+            return;
+
+        }
+
+        if (
+            cvv.length < 3
+        ) {
+
+            showToast(
+                "Invalid CVV",
+                "Enter a valid CVV."
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    const payButton =
+        document.getElementById(
+            "payButton"
+        );
+
+
+    if (payButton) {
+
+        payButton.disabled =
+            true;
+
+        payButton.innerHTML = `
+
+            <i class="
+                fa-solid
+                fa-spinner
+                fa-spin
+            "></i>
+
+            Processing payment...
+
+        `;
+
+    }
+
+
+    try {
+
+        /*
+         * DEMO PAYMENT
+         *
+         * This confirms QR / UPI / Card
+         * in the interface without moving
+         * real money.
+         */
+
+        await delay(900);
+
+
+        const bookingId =
+            generateUniqueBookingId();
+
+
+        const amount =
+            Math.round(
+                18.4 *
+                selectedStation.price
+            );
+
+
+        const order = {
+
+            id:
+                bookingId,
+
+            bookingId:
+                bookingId,
+
+            userEmail:
+                currentUser.email,
+
+            customerName:
+                currentUser.name,
+
+            stationId:
+                selectedStation.id,
+
+            stationName:
+                selectedStation.name,
+
+            address:
+                selectedStation.address,
+
+            chargerName:
+                selectedCharger?.name ||
+                "Charger",
+
+            connector:
+                selectedStation.connector,
+
+            power:
+                selectedStation.power,
+
+            date:
+                bookingDraft.date ||
+                getToday(),
+
+            time:
+                bookingDraft.time ||
+                "19:30",
+
+            vehicle:
+                bookingDraft.vehicle ||
+                "Tata Nexon EV",
+
+            vehicleNumber:
+                bookingDraft.vehicleNumber,
+
+            amount:
+                amount,
+
+            paymentMethod:
+                selectedPaymentMethod
+                    .toUpperCase(),
+
+            paymentStatus:
+                "Paid",
+
+            status:
+                "Paid & confirmed",
+
+            rating:
+                null,
+
+            createdAt:
+                new Date()
+                    .toISOString()
+
+        };
+
+
+        /*
+         * Save locally first.
+         * This makes My Orders work even
+         * if the backend is unavailable.
+         */
+
+        const orders =
+            JSON.parse(
+                localStorage.getItem(
+                    "voltmap-orders"
+                ) || "[]"
+            );
+
+
+        orders.unshift(
+            order
+        );
+
+
+        localStorage.setItem(
+            "voltmap-orders",
+            JSON.stringify(orders)
+        );
+
+
+        /*
+         * Also save through the existing
+         * backend /orders endpoint.
+         */
+
+        try {
+
+            await apiRequest(
+                "/orders",
+                {
+                    method: "POST",
+                    body:
+                        JSON.stringify(
+                            order
+                        )
+                }
+            );
+
+        }
+        catch (
+            backendOrderError
+        ) {
+
+            console.warn(
+                "Backend order save failed. Local order was retained.",
+                backendOrderError
+            );
+
+        }
+
+
+        /*
+         * Also attempt to create the
+         * actual booking in the booking
+         * endpoint. The frontend still
+         * remains usable when that endpoint
+         * is unavailable.
+         */
+
+        try {
+
+            const bookingResponse =
+                await apiRequest(
+                    "/bookings",
+                    {
+                        method: "POST",
+
+                        body:
+                            JSON.stringify({
+
+                                stationId:
+                                    selectedStation.id,
+
+                                name:
+                                    currentUser.name,
+
+                                userEmail:
+                                    currentUser.email,
+
+                                vehicleNumber:
+                                    bookingDraft.vehicleNumber,
+
+                                date:
+                                    bookingDraft.date ||
+                                    getToday(),
+
+                                time:
+                                    bookingDraft.time ||
+                                    "19:30",
+
+                                durationMinutes:
+                                    60,
+
+                                paymentMethod:
+                                    selectedPaymentMethod
+                                        .toUpperCase(),
+
+                                amount:
+                                    amount,
+
+                                bookingId:
+                                    bookingId
+
+                            })
+
+                    }
+                );
+
+
+            if (
+                bookingResponse?.data
+            ) {
+
+                const backendBooking =
+                    bookingResponse.data;
+
+
+                order.id =
+                    backendBooking.id ||
+                    bookingId;
+
+                order.bookingId =
+                    backendBooking.id ||
+                    bookingId;
+
+            }
+
+        }
+        catch (
+            bookingError
+        ) {
+
+            console.warn(
+                "Backend booking endpoint was not available. Local booking retained.",
+                bookingError
+            );
+
+        }
+
+
+        selectedStation.available =
+            Math.max(
+                0,
+                selectedStation.available - 1
+            );
+
+
+        filteredStations =
+            filteredStations.map(
+                station =>
+                    station.id ===
+                    selectedStation.id
+                        ? selectedStation
+                        : station
+            );
+
+
+        renderStations();
+
+
+        document
+            .getElementById(
+                "paymentModal"
+            )
+            ?.classList.remove(
+                "open"
+            );
+
+
+        showPaymentSuccess(
+            order
+        );
+
+
+    }
+    catch (error) {
+
+        console.error(
+            "Payment error:",
+            error
+        );
+
+
+        if (payButton) {
+
+            payButton.disabled =
+                false;
+
+            payButton.innerHTML = `
+
+                <i class="
+                    fa-solid
+                    fa-lock
+                "></i>
+
+                Pay ₹${currentPaymentAmount}
+                & reserve
+
+            `;
+
+        }
+
+
+        showToast(
+            "Payment failed",
+            error.message ||
+            "Please try again."
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   RAZORPAY
+   ========================================================= */
+
+function loadRazorpayScript() {
+
+    return new Promise(
+        (resolve, reject) => {
+
+            if (
+                window.Razorpay
+            ) {
+
+                resolve(
+                    window.Razorpay
+                );
+
+                return;
+
+            }
+
+
+            const existing =
+                document.querySelector(
+                    'script[data-razorpay-sdk="true"]'
+                );
+
+
+            if (existing) {
+
+                existing.addEventListener(
+                    "load",
+                    () => resolve(
+                        window.Razorpay
+                    )
+                );
+
+                existing.addEventListener(
+                    "error",
+                    reject
+                );
+
+                return;
+
+            }
+
+
+            const script =
+                document.createElement(
+                    "script"
+                );
+
+            script.src =
+                "https://checkout.razorpay.com/v1/checkout.js";
+
+            script.async =
+                true;
+
+            script.dataset.razorpaySdk =
+                "true";
+
+
+            script.onload =
+                () => resolve(
+                    window.Razorpay
+                );
+
+
+            script.onerror =
+                () =>
+                    reject(
+                        new Error(
+                            "Razorpay checkout could not be loaded."
+                        )
+                    );
+
+
+            document.head.appendChild(
+                script
+            );
+
+        }
+    );
+
+}
+
+
+async function processRazorpayPayment() {
+
+    if (!selectedStation) {
+
+        return;
+
+    }
+
+
+    const amount =
+        Math.round(
+            18.4 *
+            selectedStation.price
+        );
+
+
+    const payButton =
+        document.getElementById(
+            "payButton"
+        );
+
+
+    if (payButton) {
+
+        payButton.disabled =
+            true;
+
+        payButton.innerHTML = `
+
+            <i class="
+                fa-solid
+                fa-spinner
+                fa-spin
+            "></i>
+
+            Opening Razorpay...
+
+        `;
+
+    }
+
+
+    try {
+
+        const Razorpay =
+            await loadRazorpayScript();
+
+
+        /*
+         * This endpoint will be added to
+         * your server.js in the next step.
+         */
+
+        const response =
+            await apiRequest(
+                "/payment/create-order",
+                {
+                    method: "POST",
+
+                    body:
+                        JSON.stringify({
+
+                            amount:
+                                amount,
+
+                            currency:
+                                "INR",
+
+                            receipt:
+                                generateUniqueBookingId()
+
+                        })
+
+                }
+            );
+
+
+        if (
+            !response?.success ||
+            !response?.data
+        ) {
+
+            throw new Error(
+                response?.message ||
+                "Unable to create Razorpay order."
+            );
+
+        }
+
+
+        const razorpayOrder =
+            response.data;
+
+
+        const options = {
+
+            key:
+                razorpayOrder.keyId ||
+                response.keyId ||
+                "",
+
+            amount:
+                razorpayOrder.amount ||
+                amount * 100,
+
+            currency:
+                razorpayOrder.currency ||
+                "INR",
+
+            name:
+                "VoltMap",
+
+            description:
+                "EV Charging Reservation",
+
+            order_id:
+                razorpayOrder.orderId ||
+                razorpayOrder.id,
+
+
+            prefill: {
+
+                name:
+                    currentUser.name,
+
+                email:
+                    currentUser.email
+
+            },
+
+
+            theme: {
+
+                color:
+                    "#00e5a0"
+
+            },
+
+
+            handler:
+                async function (
+                    paymentResponse
+                ) {
+
+                    await verifyRazorpayPayment(
+                        paymentResponse,
+                        amount
+                    );
+
+                },
+
+
+            modal: {
+
+                ondismiss:
+                    () => {
+
+                        const button =
+                            document
+                                .getElementById(
+                                    "payButton"
+                                );
+
+                        if (button) {
+
+                            button.disabled =
+                                false;
+
+                            button.innerHTML = `
+                                <i class="
+                                    fa-solid
+                                    fa-credit-card
+                                "></i>
+                                Pay ₹${amount}
+                                with Razorpay
+                            `;
+
+                        }
+
+                    }
+
+            }
+
+        };
+
+
+        if (!options.key) {
+
+            throw new Error(
+                "Razorpay key was not returned by the backend."
+            );
+
+        }
+
+
+        const checkout =
+            new Razorpay(
+                options
+            );
+
+
+        checkout.open();
+
+    }
+    catch (error) {
+
+        console.error(
+            "Razorpay error:",
+            error
+        );
+
+
+        if (payButton) {
+
+            payButton.disabled =
+                false;
+
+            payButton.innerHTML = `
+                <i class="
+                    fa-solid
+                    fa-credit-card
+                "></i>
+                Pay ₹${amount}
+                with Razorpay
+            `;
+
+        }
+
+
+        showToast(
+            "Razorpay unavailable",
+            error.message ||
+            "Start the updated backend and configure Razorpay credentials."
+        );
+
+    }
+
+}
+
+
+async function verifyRazorpayPayment(
+    paymentResponse,
+    amount
+) {
+
+    try {
+
+        const verification =
+            await apiRequest(
+                "/payment/verify",
+                {
+                    method: "POST",
+
+                    body:
+                        JSON.stringify({
+
+                            razorpayOrderId:
+                                paymentResponse
+                                    .razorpay_order_id,
+
+                            razorpayPaymentId:
+                                paymentResponse
+                                    .razorpay_payment_id,
+
+                            razorpaySignature:
+                                paymentResponse
+                                    .razorpay_signature,
+
+                            amount:
+                                amount,
+
+                            userEmail:
+                                currentUser.email,
+
+                            name:
+                                currentUser.name,
+
+                            stationId:
+                                selectedStation.id,
+
+                            vehicleNumber:
+                                bookingDraft.vehicleNumber,
+
+                            date:
+                                bookingDraft.date,
+
+                            time:
+                                bookingDraft.time,
+
+                            durationMinutes:
+                                60
+
+                        })
+
+                }
+            );
+
+
+        if (
+            !verification?.success
+        ) {
+
+            throw new Error(
+                verification?.message ||
+                "Payment verification failed."
+            );
+
+        }
+
+
+        const serverOrder =
+            verification.data ||
+            {};
+
+
+        const bookingId =
+            serverOrder.bookingId ||
+            serverOrder.id ||
+            generateUniqueBookingId();
+
+
+        const order = {
+
+            id:
+                bookingId,
+
+            bookingId:
+                bookingId,
+
+            userEmail:
+                currentUser.email,
+
+            customerName:
+                currentUser.name,
+
+            stationId:
+                selectedStation.id,
+
+            stationName:
+                selectedStation.name,
+
+            address:
+                selectedStation.address,
+
+            chargerName:
+                selectedCharger?.name ||
+                "Charger",
+
+            date:
+                bookingDraft.date ||
+                getToday(),
+
+            time:
+                bookingDraft.time ||
+                "19:30",
+
+            vehicle:
+                bookingDraft.vehicle ||
+                "Tata Nexon EV",
+
+            vehicleNumber:
+                bookingDraft.vehicleNumber,
+
+            amount:
+                amount,
+
+            paymentMethod:
+                "RAZORPAY",
+
+            paymentStatus:
+                "Paid",
+
+            status:
+                "Paid & confirmed",
+
+            razorpayOrderId:
+                paymentResponse
+                    .razorpay_order_id,
+
+            razorpayPaymentId:
+                paymentResponse
+                    .razorpay_payment_id,
+
+            createdAt:
+                new Date()
+                    .toISOString(),
+
+            rating:
+                null
+
+        };
+
+
+        const orders =
+            JSON.parse(
+                localStorage.getItem(
+                    "voltmap-orders"
+                ) || "[]"
+            );
+
+
+        orders.unshift(
+            order
+        );
+
+
+        localStorage.setItem(
+            "voltmap-orders",
+            JSON.stringify(
+                orders
+            )
+        );
+
+
+        selectedStation.available =
+            Math.max(
+                0,
+                selectedStation.available - 1
+            );
+
+
+        renderStations();
+
+
+        document
+            .getElementById(
+                "paymentModal"
+            )
+            ?.classList.remove(
+                "open"
+            );
+
+
+        showPaymentSuccess(
+            order
+        );
+
+
+    }
+    catch (error) {
+
+        console.error(
+            "Razorpay verification error:",
+            error
+        );
+
+
+        showToast(
+            "Payment verification failed",
+            error.message ||
+            "Do not close the page. Contact support if money was deducted."
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   PAYMENT SUCCESS
+   ========================================================= */
+
+function showPaymentSuccess(
+    order
+) {
 
     const modal =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
-    modal.className = "modal-overlay open";
+
+    modal.className =
+        "modal-overlay open";
+
+
+    modal.dataset.paymentSuccess =
+        "true";
+
 
     modal.innerHTML = `
 
-        <div class="modal"
-            style="text-align:center">
+        <div
+            class="modal"
+            style="
+                text-align:center;
+                position:relative;
+            "
+        >
 
-            <div style="
-                width:70px;
-                height:70px;
-                margin:10px auto 18px;
+            <button
+                type="button"
+                class="modal-close"
+                data-success-close
+                style="
+                    position:absolute;
+                    top:17px;
+                    right:17px;
+                "
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
 
-                display:grid;
-                place-items:center;
 
-                border-radius:50%;
-
-                background:var(--green-soft);
-                color:var(--green);
-
-                font-size:30px;
-            ">
+            <div
+                style="
+                    width:72px;
+                    height:72px;
+                    margin:8px auto 18px;
+                    display:grid;
+                    place-items:center;
+                    border-radius:50%;
+                    background:var(--green-soft);
+                    color:var(--green);
+                    font-size:30px;
+                "
+            >
                 <i class="fa-solid fa-check"></i>
             </div>
 
 
             <span class="modal-eyebrow">
-                RESERVATION CONFIRMED
+                PAYMENT SUCCESSFUL
             </span>
 
 
-            <h2 style="
-                font-family:var(--font-display);
-                margin:7px 0;
-            ">
-                You're all set!
+            <h2
+                style="
+                    font-family:var(--font-display);
+                    margin:8px 0;
+                "
+            >
+                Booking confirmed!
             </h2>
 
 
-            <p style="
-                color:var(--muted);
-                font-size:11px;
-            ">
-                Your charger has been reserved successfully.
+            <p
+                style="
+                    color:var(--muted);
+                    font-size:11px;
+                    line-height:1.7;
+                "
+            >
+                Your charging slot has been
+                reserved successfully.
             </p>
 
 
-            <div class="booking-summary"
+            <div
+                style="
+                    margin-top:18px;
+                    padding:17px;
+                    border:1px solid var(--border);
+                    background:var(--card);
+                    border-radius:12px;
+                "
+            >
+
+                <span
+                    style="
+                        display:block;
+                        color:var(--muted);
+                        font-family:var(--font-mono);
+                        font-size:9px;
+                        letter-spacing:.12em;
+                    "
+                >
+                    BOOKING ID
+                </span>
+
+
+                <strong
+                    style="
+                        display:block;
+                        font-family:var(--font-mono);
+                        font-size:18px;
+                        color:var(--green);
+                        margin:7px 0;
+                    "
+                >
+                    ${escapeHtmlSafe(
+                        order.bookingId ||
+                        order.id
+                    )}
+                </strong>
+
+
+                <button
+                    type="button"
+                    class="btn-secondary"
+                    data-copy-booking
+                >
+                    <i class="
+                        fa-regular
+                        fa-copy
+                    "></i>
+
+                    Copy Booking ID
+
+                </button>
+
+            </div>
+
+
+            <div
+                class="booking-summary"
                 style="
                     text-align:left;
-                    margin-top:20px;
+                    margin-top:18px;
                 "
             >
 
                 <div class="summary-line">
 
-                    <span>Booking ID</span>
+                    <span>
+                        Station
+                    </span>
 
                     <strong>
-                        ${bookingId}
-                    </strong>
-
-                </div>
-
-
-                <div class="summary-line">
-
-                    <span>Station</span>
-
-                    <strong>
-                        ${selectedStation.name}
-                    </strong>
-
-                </div>
-
-
-                <div class="summary-line">
-
-                    <span>Charger</span>
-
-                    <strong>
-                        ${selectedCharger?.name || "CCS2"}
-                    </strong>
-
-                </div>
-
-
-                <div class="summary-line">
-
-                    <span>Power</span>
-
-                    <strong>
-                        ${selectedStation.power} kW
-                    </strong>
-
-                </div>
-
-
-                <div class="summary-line summary-total">
-
-                    <span>Estimated cost</span>
-
-                    <strong>
-                        ₹${Math.round(
-                            18.4 *
-                            selectedStation.price
+                        ${escapeHtmlSafe(
+                            order.stationName
                         )}
+                    </strong>
+
+                </div>
+
+
+                <div class="summary-line">
+
+                    <span>
+                        Charger
+                    </span>
+
+                    <strong>
+                        ${escapeHtmlSafe(
+                            order.chargerName
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div class="summary-line">
+
+                    <span>
+                        Date
+                    </span>
+
+                    <strong>
+                        ${escapeHtmlSafe(
+                            order.date
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div class="summary-line">
+
+                    <span>
+                        Time
+                    </span>
+
+                    <strong>
+                        ${escapeHtmlSafe(
+                            order.time
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div class="summary-line">
+
+                    <span>
+                        Vehicle
+                    </span>
+
+                    <strong>
+                        ${escapeHtmlSafe(
+                            order.vehicleNumber
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div class="
+                    summary-line
+                    summary-total
+                ">
+
+                    <span>
+                        Paid
+                    </span>
+
+                    <strong>
+                        ₹${order.amount}
                     </strong>
 
                 </div>
@@ -2398,30 +4855,35 @@ function showConfirmation(bookingId) {
             </div>
 
 
-            <div style="
-                display:flex;
-                gap:8px;
-                margin-top:15px;
-            ">
+            <div
+                style="
+                    display:grid;
+                    gap:9px;
+                    margin-top:18px;
+                "
+            >
 
                 <button
-                    class="btn-secondary"
-                    style="flex:1"
-                    onclick="
-                        this.closest('.modal-overlay').remove()
-                    "
+                    type="button"
+                    class="btn-primary full-btn"
+                    data-view-orders
                 >
-                    Done
+                    <i class="
+                        fa-regular
+                        fa-calendar-check
+                    "></i>
+
+                    View My Orders
+
                 </button>
 
+
                 <button
-                    class="btn-primary"
-                    style="flex:1"
-                    onclick="
-                        addToCalendar();
-                    "
+                    type="button"
+                    class="btn-secondary full-btn"
+                    data-success-close
                 >
-                    Add to calendar
+                    Done
                 </button>
 
             </div>
@@ -2431,7 +4893,157 @@ function showConfirmation(bookingId) {
     `;
 
 
-    document.body.appendChild(modal);
+    document.body.appendChild(
+        modal
+    );
+
+
+    modal
+        .querySelectorAll(
+            "[data-success-close]"
+        )
+        .forEach(
+            button => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        modal.remove();
+
+                    }
+                );
+
+            }
+        );
+
+
+    modal
+        .querySelector(
+            "[data-copy-booking]"
+        )
+        ?.addEventListener(
+            "click",
+            async () => {
+
+                const id =
+                    order.bookingId ||
+                    order.id;
+
+                try {
+
+                    await navigator
+                        .clipboard
+                        .writeText(id);
+
+                    showToast(
+                        "Copied",
+                        "Booking ID copied to clipboard."
+                    );
+
+                }
+                catch {
+
+                    showToast(
+                        "Booking ID",
+                        id
+                    );
+
+                }
+
+            }
+        );
+
+
+    modal
+        .querySelector(
+            "[data-view-orders]"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                modal.remove();
+
+                openOrders();
+
+            }
+        );
+
+
+    modal
+        .addEventListener(
+            "click",
+            event => {
+
+                if (
+                    event.target ===
+                    modal
+                ) {
+
+                    modal.remove();
+
+                }
+
+            }
+        );
+
+
+    showToast(
+        "Payment successful",
+        `Booking ID: ${
+            order.bookingId ||
+            order.id
+        }`
+    );
+
+}
+
+
+/* =========================================================
+   UNIQUE BOOKING ID
+   ========================================================= */
+
+function generateUniqueBookingId() {
+
+    const timestamp =
+        Date.now()
+            .toString(36)
+            .toUpperCase();
+
+    const random =
+        Math.random()
+            .toString(36)
+            .substring(
+                2,
+                7
+            )
+            .toUpperCase();
+
+    return `VM-${timestamp}-${random}`;
+
+}
+
+
+/* =========================================================
+   SAFE HTML
+   ========================================================= */
+
+function escapeHtmlSafe(
+    value
+) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent =
+        value == null
+            ? ""
+            : String(value);
+
+    return div.innerHTML;
 
 }
 
@@ -2442,11 +5054,14 @@ function showConfirmation(bookingId) {
 
 searchInput.addEventListener(
     "input",
-    debounce(() => {
+    debounce(
+        () => {
 
-        applySearch();
+            applySearch();
 
-    }, 250)
+        },
+        250
+    )
 );
 
 
@@ -2457,69 +5072,215 @@ function applySearch() {
             .trim()
             .toLowerCase();
 
-
     filteredStations =
-        stations.filter(station => {
+        stations.filter(
+            station => {
 
-            return (
-                station.name.toLowerCase().includes(query) ||
-                station.address.toLowerCase().includes(query) ||
-                station.operator.toLowerCase().includes(query) ||
-                station.connector.toLowerCase().includes(query)
-            );
+                return (
 
-        });
+                    station.name
+                        .toLowerCase()
+                        .includes(query)
 
+                    ||
+
+                    station.address
+                        .toLowerCase()
+                        .includes(query)
+
+                    ||
+
+                    station.operator
+                        .toLowerCase()
+                        .includes(query)
+
+                    ||
+
+                    station.connector
+                        .toLowerCase()
+                        .includes(query)
+
+                );
+
+            }
+        );
 
     renderStations();
 
-    renderSearchSuggestions(query);
+    renderSearchSuggestions(
+        query
+    );
 
 }
 
 
-function renderSearchSuggestions(query) {
+function renderSearchSuggestions(
+    query
+) {
 
-    const suggestionBox = document.getElementById("searchSuggestions");
+    const suggestionBox =
+        document.getElementById(
+            "searchSuggestions"
+        );
 
     if (!query) {
-        suggestionBox.classList.remove("open");
-        suggestionBox.innerHTML = "";
+
+        suggestionBox
+            .classList
+            .remove(
+                "open"
+            );
+
+        suggestionBox.innerHTML =
+            "";
+
         return;
+
     }
 
-    const matches = stations.filter(station =>
-        [station.name, station.address, station.operator, station.connector]
-            .some(value => value.toLowerCase().includes(query))
-    ).slice(0, 5);
+
+    const matches =
+        stations
+            .filter(
+                station =>
+                    [
+                        station.name,
+                        station.address,
+                        station.operator,
+                        station.connector
+                    ]
+                    .some(
+                        value =>
+                            value
+                                .toLowerCase()
+                                .includes(
+                                    query
+                                )
+                    )
+            )
+            .slice(
+                0,
+                5
+            );
+
 
     if (!matches.length) {
-        suggestionBox.innerHTML = `<div class="suggestion-item"><i class="fa-solid fa-location-dot"></i><span><strong>No charging locations found</strong><small>Try another area or station name.</small></span></div>`;
-    }
-    else {
-        suggestionBox.innerHTML = matches.map(station => `
-            <button class="suggestion-item" onclick="selectSearchSuggestion(${station.id})">
-                <i class="fa-solid fa-charging-station"></i>
-                <span><strong>${station.name}</strong><small>${station.address} · ${station.available}/${station.total} available</small></span>
-            </button>
-        `).join("");
+
+        suggestionBox.innerHTML = `
+
+            <div
+                class="suggestion-item"
+            >
+                <i class="
+                    fa-solid
+                    fa-location-dot
+                "></i>
+
+                <span>
+
+                    <strong>
+                        No charging locations found
+                    </strong>
+
+                    <small>
+                        Try another area or station name.
+                    </small>
+
+                </span>
+
+            </div>
+
+        `;
+
     }
 
-    suggestionBox.classList.add("open");
+    else {
+
+        suggestionBox.innerHTML =
+            matches
+                .map(
+                    station => `
+
+                        <button
+                            class="
+                                suggestion-item
+                            "
+                            onclick="
+                                selectSearchSuggestion(
+                                    ${station.id}
+                                )
+                            "
+                        >
+
+                            <i class="
+                                fa-solid
+                                fa-charging-station
+                            "></i>
+
+                            <span>
+
+                                <strong>
+                                    ${station.name}
+                                </strong>
+
+                                <small>
+                                    ${station.address}
+                                    ·
+                                    ${station.available}/${station.total}
+                                    available
+                                </small>
+
+                            </span>
+
+                        </button>
+
+                    `
+                )
+                .join("");
+
+    }
+
+    suggestionBox
+        .classList
+        .add(
+            "open"
+        );
 
 }
 
 
-function selectSearchSuggestion(id) {
+function selectSearchSuggestion(
+    id
+) {
 
-    const station = stations.find(item => item.id === id);
+    const station =
+        stations.find(
+            item =>
+                item.id === id
+        );
+
     if (!station) return;
 
-    searchInput.value = station.name;
-    filteredStations = [station];
-    document.getElementById("searchSuggestions").classList.remove("open");
+    searchInput.value =
+        station.name;
+
+    filteredStations =
+        [station];
+
+    document
+        .getElementById(
+            "searchSuggestions"
+        )
+        .classList
+        .remove(
+            "open"
+        );
+
     renderStations();
-    openStation(id);
+
+    openStation(
+        id
+    );
 
 }
 
@@ -2529,75 +5290,114 @@ function selectSearchSuggestion(id) {
    ========================================================= */
 
 document
-    .getElementById("sortSelect")
-    .addEventListener("change", e => {
+    .getElementById(
+        "sortSelect"
+    )
+    .addEventListener(
+        "change",
+        e => {
 
-        const type = e.target.value;
+            const type =
+                e.target.value;
 
+            if (
+                type ===
+                "distance"
+            ) {
 
-        if (type === "distance") {
+                filteredStations.sort(
+                    (a, b) =>
+                        a.distance -
+                        b.distance
+                );
 
-            filteredStations.sort(
-                (a, b) =>
-                    a.distance - b.distance
-            );
+            }
+
+            else if (
+                type ===
+                "price-low"
+            ) {
+
+                filteredStations.sort(
+                    (a, b) =>
+                        a.price -
+                        b.price
+                );
+
+            }
+
+            else if (
+                type ===
+                "price-high"
+            ) {
+
+                filteredStations.sort(
+                    (a, b) =>
+                        b.price -
+                        a.price
+                );
+
+            }
+
+            else if (
+                type ===
+                "speed-high"
+            ) {
+
+                filteredStations.sort(
+                    (a, b) =>
+                        b.power -
+                        a.power
+                );
+
+            }
+
+            else if (
+                type ===
+                "rating"
+            ) {
+
+                filteredStations.sort(
+                    (a, b) =>
+                        b.rating -
+                        a.rating
+                );
+
+            }
+
+            else if (
+                type ===
+                "availability"
+            ) {
+
+                filteredStations.sort(
+                    (a, b) =>
+                        b.available -
+                        a.available
+                );
+
+            }
+
+            else {
+
+                filteredStations.sort(
+                    (a, b) =>
+                        recommendationScore(b)
+                        -
+                        recommendationScore(a)
+                );
+
+            }
+
+            renderStations();
 
         }
-
-        else if (type === "price") {
-
-            filteredStations.sort(
-                (a, b) =>
-                    a.price - b.price
-            );
-
-        }
-
-        else if (type === "speed") {
-
-            filteredStations.sort(
-                (a, b) =>
-                    b.power - a.power
-            );
-
-        }
-
-        else if (type === "rating") {
-
-            filteredStations.sort(
-                (a, b) =>
-                    b.rating - a.rating
-            );
-
-        }
-
-        else if (type === "availability") {
-
-            filteredStations.sort(
-                (a, b) =>
-                    b.available - a.available
-            );
-
-        }
-
-        else {
-
-            filteredStations.sort(
-                (a, b) =>
-                    recommendationScore(b)
-                    -
-                    recommendationScore(a)
-            );
-
-        }
+    );
 
 
-        renderStations();
-
-    });
-
-
-function recommendationScore(station) {
+function recommendationScore(
+    station
+) {
 
     const availability =
         station.available /
@@ -2605,21 +5405,42 @@ function recommendationScore(station) {
 
     const distanceScore =
         1 /
-        Math.max(station.distance, 1);
+        Math.max(
+            station.distance,
+            1
+        );
 
     const speedScore =
-        Math.min(station.power / 150, 1);
+        Math.min(
+            station.power /
+            150,
+            1
+        );
 
     const priceScore =
         1 /
         station.price;
 
     return (
-        availability * 5 +
-        distanceScore * 2 +
-        speedScore * 2 +
-        station.rating +
+
+        availability * 5
+
+        +
+
+        distanceScore * 2
+
+        +
+
+        speedScore * 2
+
+        +
+
+        station.rating
+
+        +
+
         priceScore * 2
+
     );
 
 }
@@ -2630,64 +5451,95 @@ function recommendationScore(station) {
    ========================================================= */
 
 document
-    .querySelectorAll(".quick-filter")
-    .forEach(button => {
+    .querySelectorAll(
+        ".quick-filter"
+    )
+    .forEach(
+        button => {
 
-        button.addEventListener("click", () => {
+            button.addEventListener(
+                "click",
+                () => {
 
-            document
-                .querySelectorAll(".quick-filter")
-                .forEach(btn =>
-                    btn.classList.remove("active")
-                );
+                    document
+                        .querySelectorAll(
+                            ".quick-filter"
+                        )
+                        .forEach(
+                            btn =>
+                                btn.classList
+                                .remove(
+                                    "active"
+                                )
+                        );
 
-            button.classList.add("active");
-
-
-            const filter =
-                button.dataset.filter;
-
-
-            if (filter === "available") {
-
-                filteredStations =
-                    stations.filter(
-                        s => s.available > 0
+                    button.classList.add(
+                        "active"
                     );
 
-            }
 
-            else if (filter === "fast") {
-
-                filteredStations =
-                    stations.filter(
-                        s => s.power >= 100
-                    );
-
-            }
-
-            else if (filter === "cheap") {
-
-                filteredStations =
-                    stations.filter(
-                        s => s.price <= 18
-                    );
-
-            }
-
-            else {
-
-                filteredStations =
-                    [...stations];
-
-            }
+                    const filter =
+                        button.dataset.filter;
 
 
-            renderStations();
+                    if (
+                        filter ===
+                        "available"
+                    ) {
 
-        });
+                        filteredStations =
+                            stations.filter(
+                                s =>
+                                    s.available >
+                                    0
+                            );
 
-    });
+                    }
+
+                    else if (
+                        filter ===
+                        "fast"
+                    ) {
+
+                        filteredStations =
+                            stations.filter(
+                                s =>
+                                    s.power >=
+                                    100
+                            );
+
+                    }
+
+                    else if (
+                        filter ===
+                        "cheap"
+                    ) {
+
+                        filteredStations =
+                            stations.filter(
+                                s =>
+                                    s.price <=
+                                    18
+                            );
+
+                    }
+
+                    else {
+
+                        filteredStations =
+                            [
+                                ...stations
+                            ];
+
+                    }
+
+                    renderStations();
+
+                }
+            );
+
+        }
+    );
 
 
 /* =========================================================
@@ -2695,98 +5547,141 @@ document
    ========================================================= */
 
 document
-    .getElementById("filterBtn")
-    .addEventListener("click", () => {
+    .getElementById(
+        "filterBtn"
+    )
+    .addEventListener(
+        "click",
+        () => {
 
-        filterModal.classList.add("open");
+            filterModal.classList.add(
+                "open"
+            );
 
-    });
+        }
+    );
 
 
 document
-    .getElementById("applyFilters")
-    .addEventListener("click", applyAdvancedFilters);
+    .getElementById(
+        "applyFilters"
+    )
+    .addEventListener(
+        "click",
+        applyAdvancedFilters
+    );
 
 
 function applyAdvancedFilters() {
 
     const connector =
-        document.getElementById(
-            "connectorFilter"
-        ).value;
+        document
+            .getElementById(
+                "connectorFilter"
+            )
+            .value;
 
 
     const maxPrice =
         Number(
-            document.getElementById(
-                "priceRange"
-            ).value
+            document
+                .getElementById(
+                    "priceRange"
+                )
+                .value
         );
 
 
     const minSpeed =
         Number(
-            document.getElementById(
-                "speedFilter"
-            ).value
+            document
+                .getElementById(
+                    "speedFilter"
+                )
+                .value
         );
 
 
     const availableOnly =
-        document.getElementById(
-            "availableFilter"
-        ).checked;
+        document
+            .getElementById(
+                "availableFilter"
+            )
+            .checked;
 
 
     filteredStations =
-        stations.filter(station => {
+        stations.filter(
+            station => {
 
-            if (
-                selectedChargerType !== "all" &&
-                station.chargerType !== selectedChargerType
-            ) {
-                return false;
+                if (
+                    selectedChargerType !==
+                    "all" &&
+                    station.chargerType !==
+                    selectedChargerType
+                ) {
+
+                    return false;
+
+                }
+
+
+                if (
+                    connector !==
+                    "all" &&
+                    station.connector !==
+                    connector
+                ) {
+
+                    return false;
+
+                }
+
+
+                if (
+                    station.price >
+                    maxPrice
+                ) {
+
+                    return false;
+
+                }
+
+
+                if (
+                    station.power <
+                    minSpeed
+                ) {
+
+                    return false;
+
+                }
+
+
+                if (
+                    availableOnly &&
+                    station.available ===
+                    0
+                ) {
+
+                    return false;
+
+                }
+
+
+                return true;
+
             }
+        );
 
 
-            if (
-                connector !== "all" &&
-                station.connector !== connector
-            ) {
-                return false;
-            }
+    filterModal.classList.remove(
+        "open"
+    );
 
-
-            if (
-                station.price > maxPrice
-            ) {
-                return false;
-            }
-
-
-            if (
-                station.power < minSpeed
-            ) {
-                return false;
-            }
-
-
-            if (
-                availableOnly &&
-                station.available === 0
-            ) {
-                return false;
-            }
-
-
-            return true;
-
-        });
-
-
-    filterModal.classList.remove("open");
 
     renderStations();
+
 
     showToast(
         "Filters applied",
@@ -2804,26 +5699,37 @@ document
     .querySelectorAll(
         ".option-btn[data-type='charger']"
     )
-    .forEach(button => {
+    .forEach(
+        button => {
 
-        button.addEventListener("click", () => {
+            button.addEventListener(
+                "click",
+                () => {
 
-            document
-                .querySelectorAll(
-                    ".option-btn[data-type='charger']"
-                )
-                .forEach(btn =>
-                    btn.classList.remove("active")
-                );
+                    document
+                        .querySelectorAll(
+                            ".option-btn[data-type='charger']"
+                        )
+                        .forEach(
+                            btn =>
+                                btn.classList
+                                .remove(
+                                    "active"
+                                )
+                        );
 
-            button.classList.add("active");
+                    button.classList.add(
+                        "active"
+                    );
 
-            selectedChargerType =
-                button.dataset.value;
+                    selectedChargerType =
+                        button.dataset.value;
 
-        });
+                }
+            );
 
-    });
+        }
+    );
 
 
 /* =========================================================
@@ -2831,15 +5737,22 @@ document
    ========================================================= */
 
 document
-    .getElementById("priceRange")
-    .addEventListener("input", e => {
+    .getElementById(
+        "priceRange"
+    )
+    .addEventListener(
+        "input",
+        e => {
 
-        document.getElementById(
-            "priceValue"
-        ).textContent =
-            e.target.value;
+            document
+                .getElementById(
+                    "priceValue"
+                )
+                .textContent =
+                e.target.value;
 
-    });
+        }
+    );
 
 
 /* =========================================================
@@ -2847,7 +5760,9 @@ document
    ========================================================= */
 
 document
-    .getElementById("clearFilters")
+    .getElementById(
+        "clearFilters"
+    )
     .addEventListener(
         "click",
         resetFilters
@@ -2856,49 +5771,81 @@ document
 
 function resetFilters() {
 
-    selectedChargerType = "all";
+    selectedChargerType =
+        "all";
 
-    document.getElementById(
-        "connectorFilter"
-    ).value = "all";
 
-    document.getElementById(
-        "priceRange"
-    ).value = 25;
+    document
+        .getElementById(
+            "connectorFilter"
+        )
+        .value =
+        "all";
 
-    document.getElementById(
-        "priceValue"
-    ).textContent = 25;
 
-    document.getElementById(
-        "speedFilter"
-    ).value = 0;
+    document
+        .getElementById(
+            "priceRange"
+        )
+        .value =
+        25;
 
-    document.getElementById(
-        "availableFilter"
-    ).checked = false;
+
+    document
+        .getElementById(
+            "priceValue"
+        )
+        .textContent =
+        25;
+
+
+    document
+        .getElementById(
+            "speedFilter"
+        )
+        .value =
+        0;
+
+
+    document
+        .getElementById(
+            "availableFilter"
+        )
+        .checked =
+        false;
 
 
     document
         .querySelectorAll(
             ".option-btn[data-type='charger']"
         )
-        .forEach(btn =>
-            btn.classList.remove("active")
+        .forEach(
+            btn =>
+                btn.classList
+                .remove(
+                    "active"
+                )
         );
+
 
     document
         .querySelector(
             ".option-btn[data-value='all']"
         )
-        .classList.add("active");
+        .classList
+        .add(
+            "active"
+        );
 
 
     filteredStations =
         [...stations];
 
 
-    filterModal.classList.remove("open");
+    filterModal.classList.remove(
+        "open"
+    );
+
 
     renderStations();
 
@@ -2909,12 +5856,18 @@ function resetFilters() {
    FAVORITES
    ========================================================= */
 
-function toggleFavorite(id) {
+function toggleFavorite(
+    id
+) {
 
     const station =
-        stations.find(s => s.id === id);
+        stations.find(
+            s => s.id === id
+        );
 
-    if (!station) return;
+    if (!station)
+        return;
+
 
     station.favorite =
         !station.favorite;
@@ -2940,7 +5893,9 @@ function toggleFavorite(id) {
 
 function locateUser() {
 
-    if (!navigator.geolocation) {
+    if (
+        !navigator.geolocation
+    ) {
 
         showToast(
             "Not supported",
@@ -2952,69 +5907,90 @@ function locateUser() {
     }
 
 
-    navigator.geolocation.getCurrentPosition(
+    navigator
+        .geolocation
+        .getCurrentPosition(
 
-        position => {
+            position => {
 
-            const lat =
-                position.coords.latitude;
+                const lat =
+                    position.coords.latitude;
 
-            const lng =
-                position.coords.longitude;
-
-
-            userLocation = {
-                lat,
-                lng
-            };
+                const lng =
+                    position.coords.longitude;
 
 
-            map.setView(
-                [lat, lng],
-                14,
-                {
-                    animate: true
-                }
-            );
+                userLocation = {
+                    lat,
+                    lng
+                };
 
 
-            L.circleMarker(
-                [lat, lng],
-                {
-                    radius: 8,
-                    color: "#ffffff",
-                    weight: 3,
-                    fillColor: "#5b9cff",
-                    fillOpacity: 1
-                }
-            )
-            .addTo(map)
-            .bindPopup("You are here");
+                map.setView(
+                    [
+                        lat,
+                        lng
+                    ],
+                    14,
+                    {
+                        animate: true
+                    }
+                );
 
 
-            showToast(
-                "Location found",
-                "Showing charging stations near you."
-            );
+                L.circleMarker(
+                    [
+                        lat,
+                        lng
+                    ],
+                    {
 
-        },
+                        radius: 8,
 
-        () => {
+                        color:
+                            "#ffffff",
 
-            showToast(
-                "Location unavailable",
-                "Please allow location access."
-            );
+                        weight: 3,
 
-        }
+                        fillColor:
+                            "#5b9cff",
 
-    );
+                        fillOpacity:
+                            1
+
+                    }
+                )
+                .addTo(map)
+                .bindPopup(
+                    "You are here"
+                );
+
+
+                showToast(
+                    "Location found",
+                    "Showing charging stations near you."
+                );
+
+            },
+
+            () => {
+
+                showToast(
+                    "Location unavailable",
+                    "Please allow location access."
+                );
+
+            }
+
+        );
 
 }
 
 
 document
-    .getElementById("locationBtn")
+    .getElementById(
+        "locationBtn"
+    )
     .addEventListener(
         "click",
         locateUser
@@ -3022,7 +5998,9 @@ document
 
 
 document
-    .getElementById("mapLocationBtn")
+    .getElementById(
+        "mapLocationBtn"
+    )
     .addEventListener(
         "click",
         locateUser
@@ -3033,17 +6011,26 @@ document
    DIRECTIONS
    ========================================================= */
 
-function getDirections(id) {
+function getDirections(
+    id
+) {
 
     const station =
-        stations.find(s => s.id === id);
+        stations.find(
+            s => s.id === id
+        );
 
-    if (!station) return;
+    if (!station)
+        return;
 
 
     const url =
         `https://www.google.com/maps/dir/?api=1` +
-        `${userLocation ? `&origin=${userLocation.lat},${userLocation.lng}` : ""}` +
+        `${
+            userLocation
+            ? `&origin=${userLocation.lat},${userLocation.lng}`
+            : ""
+        }` +
         `&destination=${station.lat},${station.lng}`;
 
 
@@ -3060,21 +6047,35 @@ function getDirections(id) {
    ========================================================= */
 
 document
-    .getElementById("drawerClose")
-    .addEventListener("click", closeDrawer);
+    .getElementById(
+        "drawerClose"
+    )
+    .addEventListener(
+        "click",
+        closeDrawer
+    );
 
 
-drawerOverlay.addEventListener(
-    "click",
-    closeDrawer
-);
+drawerOverlay
+    .addEventListener(
+        "click",
+        closeDrawer
+    );
 
 
 function closeDrawer() {
 
-    stationDrawer.classList.remove("open");
+    stationDrawer
+        .classList
+        .remove(
+            "open"
+        );
 
-    drawerOverlay.classList.remove("open");
+    drawerOverlay
+        .classList
+        .remove(
+            "open"
+        );
 
 }
 
@@ -3084,38 +6085,62 @@ function closeDrawer() {
    ========================================================= */
 
 document
-    .querySelectorAll("[data-close]")
-    .forEach(button => {
+    .querySelectorAll(
+        "[data-close]"
+    )
+    .forEach(
+        button => {
 
-        button.addEventListener("click", () => {
+            button.addEventListener(
+                "click",
+                () => {
 
-            const id =
-                button.dataset.close;
+                    const id =
+                        button.dataset.close;
 
-            document
-                .getElementById(id)
-                .classList.remove("open");
+                    document
+                        .getElementById(
+                            id
+                        )
+                        .classList
+                        .remove(
+                            "open"
+                        );
 
-        });
+                }
+            );
 
-    });
+        }
+    );
 
 
 document
-    .querySelectorAll(".modal-overlay")
-    .forEach(modal => {
+    .querySelectorAll(
+        ".modal-overlay"
+    )
+    .forEach(
+        modal => {
 
-        modal.addEventListener("click", e => {
+            modal.addEventListener(
+                "click",
+                e => {
 
-            if (e.target === modal) {
+                    if (
+                        e.target ===
+                        modal
+                    ) {
 
-                modal.classList.remove("open");
+                        modal.classList.remove(
+                            "open"
+                        );
 
-            }
+                    }
 
-        });
+                }
+            );
 
-    });
+        }
+    );
 
 
 /* =========================================================
@@ -3123,33 +6148,60 @@ document
    ========================================================= */
 
 document
-    .getElementById("notificationBtn")
-    .addEventListener("click", () => {
+    .getElementById(
+        "notificationBtn"
+    )
+    .addEventListener(
+        "click",
+        () => {
 
-        notificationPanel.classList.toggle("open");
+            notificationPanel
+                .classList
+                .toggle(
+                    "open"
+                );
 
-    });
+        }
+    );
 
 
 document
-    .getElementById("markRead")
-    .addEventListener("click", () => {
+    .getElementById(
+        "markRead"
+    )
+    .addEventListener(
+        "click",
+        () => {
 
-        document
-            .querySelector(".notifications")
-            .replaceChildren();
+            document
+                .querySelector(
+                    ".notifications"
+                )
+                .replaceChildren();
 
 
-        document
-            .querySelector(".notification-count")
-            .textContent = "0";
+            document
+                .querySelector(
+                    ".notification-count"
+                )
+                .textContent =
+                "0";
 
 
-        notificationPanel.classList.remove("open");
+            notificationPanel
+                .classList
+                .remove(
+                    "open"
+                );
 
-        showToast("Notifications cleared", "All notifications have been removed.");
 
-    });
+            showToast(
+                "Notifications cleared",
+                "All notifications have been removed."
+            );
+
+        }
+    );
 
 
 /* =========================================================
@@ -3157,16 +6209,30 @@ document
    ========================================================= */
 
 document
-    .getElementById("themeBtn")
-    .addEventListener("click", toggleTheme);
+    .getElementById(
+        "themeBtn"
+    )
+    .addEventListener(
+        "click",
+        toggleTheme
+    );
 
 
 function toggleTheme() {
 
-    document.body.classList.toggle("light");
+    document.body
+        .classList
+        .toggle(
+            "light"
+        );
+
 
     const light =
-        document.body.classList.contains("light");
+        document.body
+            .classList
+            .contains(
+                "light"
+            );
 
 
     localStorage.setItem(
@@ -3178,11 +6244,14 @@ function toggleTheme() {
 
 
     document
-        .querySelector("#themeBtn i")
+        .querySelector(
+            "#themeBtn i"
+        )
         .className =
-            light
-                ? "fa-solid fa-moon"
-                : "fa-solid fa-sun";
+        light
+        ? "fa-solid fa-moon"
+        : "fa-solid fa-sun";
+
 
     updateMapTheme();
 
@@ -3199,14 +6268,24 @@ function initializeTheme() {
         );
 
 
-    if (theme === "light") {
+    if (
+        theme ===
+        "light"
+    ) {
 
-        document.body.classList.add("light");
+        document.body
+            .classList
+            .add(
+                "light"
+            );
+
 
         document
-            .querySelector("#themeBtn i")
+            .querySelector(
+                "#themeBtn i"
+            )
             .className =
-                "fa-solid fa-moon";
+            "fa-solid fa-moon";
 
     }
 
@@ -3215,17 +6294,33 @@ function initializeTheme() {
 }
 
 
-function startSuggestedRoute(id, routeType) {
+function startSuggestedRoute(
+    id,
+    routeType
+) {
 
-    const station = stations.find(item => item.id === id);
-    if (!station) return;
+    const station =
+        stations.find(
+            item =>
+                item.id === id
+        );
+
+    if (!station)
+        return;
+
 
     showToast(
-        routeType === "best" ? "Opening best route" : "Opening alternate routes",
+        routeType === "best"
+            ? "Opening best route"
+            : "Opening alternate routes",
+
         "Google Maps will use current traffic to choose the best driving route."
     );
 
-    getDirections(id);
+
+    getDirections(
+        id
+    );
 
 }
 
@@ -3236,57 +6331,204 @@ function startSuggestedRoute(id, routeType) {
 
 function getSavedPlaces() {
 
-    return JSON.parse(localStorage.getItem("voltmap-saved-places") || "{}");
+    return JSON.parse(
+        localStorage.getItem(
+            "voltmap-saved-places"
+        ) || "{}"
+    );
 
 }
 
 
-function saveMapCenter(place) {
+function saveMapCenter(
+    place
+) {
 
-    if (!map) return;
+    if (!map)
+        return;
 
-    const center = map.getCenter();
-    const places = getSavedPlaces();
 
-    places[place] = { lat: center.lat, lng: center.lng };
-    localStorage.setItem("voltmap-saved-places", JSON.stringify(places));
+    const center =
+        map.getCenter();
+
+
+    const places =
+        getSavedPlaces();
+
+
+    places[place] = {
+
+        lat:
+            center.lat,
+
+        lng:
+            center.lng
+
+    };
+
+
+    localStorage.setItem(
+        "voltmap-saved-places",
+        JSON.stringify(
+            places
+        )
+    );
+
 
     if (currentUser) {
-        syncToBackend(`/users/${encodeURIComponent(currentUser.email)}/saved-places`, {
-            method: "PUT",
-            body: JSON.stringify({ place, lat: center.lat, lng: center.lng })
-        });
+
+        syncToBackend(
+            `/users/${encodeURIComponent(
+                currentUser.email
+            )}/saved-places`,
+            {
+                method: "PUT",
+
+                body:
+                    JSON.stringify({
+
+                        place,
+
+                        lat:
+                            center.lat,
+
+                        lng:
+                            center.lng
+
+                    })
+
+            }
+        );
+
     }
 
+
     renderSavedPlaces();
-    showToast(`${place[0].toUpperCase() + place.slice(1)} saved`, "The current map centre was marked for quick access.");
+
+
+    showToast(
+        `${
+            place[0].toUpperCase()
+            +
+            place.slice(1)
+        } saved`,
+        "The current map centre was marked for quick access."
+    );
 
 }
 
 
 function renderSavedPlaces() {
 
-    if (!map) return;
+    if (!map)
+        return;
 
-    Object.values(savedPlaceMarkers).forEach(marker => map.removeLayer(marker));
-    savedPlaceMarkers = {};
 
-    const icons = { home: "fa-house", office: "fa-briefcase", college: "fa-graduation-cap" };
-    const places = getSavedPlaces();
+    Object.values(
+        savedPlaceMarkers
+    )
+    .forEach(
+        marker =>
+            map.removeLayer(
+                marker
+            )
+    );
 
-    Object.entries(places).forEach(([type, location]) => {
-        const label = type[0].toUpperCase() + type.slice(1);
-        const marker = L.marker([location.lat, location.lng], {
-            icon: L.divIcon({
-                className: "saved-place-marker",
-                html: `<div style="width:30px;height:30px;display:grid;place-items:center;background:#5b9cff;color:#fff;border:2px solid #fff;border-radius:50%;box-shadow:0 4px 12px #0005"><i class="fa-solid ${icons[type]}"></i></div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            })
-        }).addTo(map).bindPopup(`<strong>${label}</strong><br><small>Saved place</small>`);
 
-        savedPlaceMarkers[type] = marker;
-    });
+    savedPlaceMarkers =
+        {};
+
+
+    const icons = {
+
+        home:
+            "fa-house",
+
+        office:
+            "fa-briefcase",
+
+        college:
+            "fa-graduation-cap"
+
+    };
+
+
+    const places =
+        getSavedPlaces();
+
+
+    Object.entries(
+        places
+    )
+    .forEach(
+        ([type, location]) => {
+
+            const label =
+                type[0]
+                    .toUpperCase()
+                +
+                type.slice(1);
+
+
+            const marker =
+                L.marker(
+                    [
+                        location.lat,
+                        location.lng
+                    ],
+                    {
+
+                        icon:
+                            L.divIcon({
+
+                                className:
+                                    "saved-place-marker",
+
+                                html:
+                                    `
+                                        <div
+                                            style="
+                                                width:30px;
+                                                height:30px;
+                                                display:grid;
+                                                place-items:center;
+                                                background:#5b9cff;
+                                                color:#fff;
+                                                border:2px solid #fff;
+                                                border-radius:50%;
+                                                box-shadow:0 4px 12px #0005
+                                            "
+                                        >
+                                            <i
+                                                class="
+                                                    fa-solid
+                                                    ${icons[type]}
+                                                "
+                                            ></i>
+                                        </div>
+                                    `,
+
+                                iconSize:
+                                    [30, 30],
+
+                                iconAnchor:
+                                    [15, 15]
+
+                            })
+
+                    }
+                )
+                .addTo(map)
+                .bindPopup(
+                    `<strong>${label}</strong><br><small>Saved place</small>`
+                );
+
+
+            savedPlaceMarkers[type] =
+                marker;
+
+        }
+    );
 
 }
 
@@ -3296,26 +6538,37 @@ function renderSavedPlaces() {
    ========================================================= */
 
 document
-    .getElementById("fullscreenBtn")
-    .addEventListener("click", () => {
+    .getElementById(
+        "fullscreenBtn"
+    )
+    .addEventListener(
+        "click",
+        () => {
 
-        const mapElement =
-            document.getElementById("map");
+            const mapElement =
+                document.getElementById(
+                    "map"
+                );
 
 
-        if (!document.fullscreenElement) {
+            if (
+                !document.fullscreenElement
+            ) {
 
-            mapElement.requestFullscreen?.();
+                mapElement
+                    .requestFullscreen?.();
+
+            }
+
+            else {
+
+                document
+                    .exitFullscreen?.();
+
+            }
 
         }
-
-        else {
-
-            document.exitFullscreen?.();
-
-        }
-
-    });
+    );
 
 
 /* =========================================================
@@ -3325,63 +6578,67 @@ document
 function openCalculator() {
 
     document
-        .getElementById("calculatorModal")
-        .classList.add("open");
+        .getElementById(
+            "calculatorModal"
+        )
+        .classList
+        .add(
+            "open"
+        );
 
 }
 
 
 document
-    .getElementById("calculateBtn")
-    .addEventListener("click", calculateCost);
+    .getElementById(
+        "calculateBtn"
+    )
+    .addEventListener(
+        "click",
+        calculateCost
+    );
 
 
 function calculateCost() {
 
     const capacity =
         Number(
-            document.getElementById(
-                "batteryCapacity"
-            ).value
+            document
+                .getElementById(
+                    "batteryCapacity"
+                )
+                .value
         );
 
 
     const current =
         Number(
-            document.getElementById(
-                "currentBattery"
-            ).value
+            document
+                .getElementById(
+                    "currentBattery"
+                )
+                .value
         );
 
 
     const target =
         Number(
-            document.getElementById(
-                "targetBattery"
-            ).value
+            document
+                .getElementById(
+                    "targetBattery"
+                )
+                .value
         );
 
 
     const price =
         Number(
-            document.getElementById(
-                "chargePrice"
-            ).value
+            document
+                .getElementById(
+                    "chargePrice"
+                )
+                .value
         );
-
-    // FIX / FEATURE: read the charging duration the user has available so
-    // we can compare the real stations against it (see
-    // renderStationComparison below), on top of the existing generic
-    // capacity/price estimate.
-    const durationField =
-        document.getElementById(
-            "chargeDuration"
-        );
-
-    const duration =
-        durationField
-            ? Number(durationField.value)
-            : NaN;
 
 
     if (
@@ -3401,192 +6658,306 @@ function calculateCost() {
 
     const energy =
         capacity *
-        ((target - current) / 100);
+        (
+            (target - current)
+            /
+            100
+        );
 
 
     const cost =
-        energy * price;
+        energy *
+        price;
 
 
-    const chargingPower = 100;
+    const chargingPower =
+        100;
 
 
     const time =
-        (energy / chargingPower) *
+        (
+            energy /
+            chargingPower
+        ) *
         60;
 
 
-    document.getElementById(
-        "energyResult"
-    ).textContent =
-        energy.toFixed(2) + " kWh";
+    document
+        .getElementById(
+            "energyResult"
+        )
+        .textContent =
+        energy.toFixed(
+            2
+        )
+        +
+        " kWh";
 
 
-    document.getElementById(
-        "costResult"
-    ).textContent =
-        "₹" + Math.round(cost);
+    document
+        .getElementById(
+            "costResult"
+        )
+        .textContent =
+        "₹"
+        +
+        Math.round(
+            cost
+        );
 
 
-    document.getElementById(
-        "timeResult"
-    ).textContent =
+    document
+        .getElementById(
+            "timeResult"
+        )
+        .textContent =
         Math.max(
             1,
-            Math.round(time)
-        ) + " min";
+            Math.round(
+                time
+            )
+        )
+        +
+        " min";
 
 
-    renderStationComparison(energy, duration);
+    renderStationComparison(
+        energy,
+        30
+    );
 
 }
 
 
-/* =========================================================
-   STATION COST COMPARISON
-   ========================================================= */
-
-// FEATURE: ranks every real station by the actual cost (and time) to
-// deliver the energy the user needs, using each station's own price and
-// power — rather than the single manually-typed price above — so the
-// user can see which station is genuinely cheapest/fastest for their
-// available charging time.
-function renderStationComparison(energy, duration) {
+function renderStationComparison(
+    energy,
+    duration
+) {
 
     const container =
         document.getElementById(
             "stationCompareResult"
         );
 
-    if (!container) return;
+
+    if (!container)
+        return;
+
 
     const hasDuration =
-        Number.isFinite(duration) &&
-        duration > 0;
-
-    const ranked = stations
-
-        .filter(station => station.open)
-
-        .map(station => {
-
-            const timeNeeded =
-                (energy / station.power) *
-                60;
-
-            const fitsInTime =
-                !hasDuration ||
-                timeNeeded <= duration;
-
-            const cost =
-                energy * station.price;
-
-            return {
-                station,
-                timeNeeded,
-                fitsInTime,
-                cost
-            };
-
-        })
-
-        .sort(
-            (a, b) =>
-                a.cost - b.cost
-        )
-
-        .slice(0, 5);
+        Number.isFinite(
+            duration
+        ) &&
+        duration >
+        0;
 
 
-    if (!ranked.length) {
+    const ranked =
+        stations
+
+            .filter(
+                station =>
+                    station.open
+            )
+
+            .map(
+                station => {
+
+                    const timeNeeded =
+                        (
+                            energy /
+                            station.power
+                        ) *
+                        60;
+
+
+                    const fitsInTime =
+                        !hasDuration ||
+                        timeNeeded <=
+                        duration;
+
+
+                    const cost =
+                        energy *
+                        station.price;
+
+
+                    return {
+
+                        station,
+
+                        timeNeeded,
+
+                        fitsInTime,
+
+                        cost
+
+                    };
+
+                }
+            )
+
+            .sort(
+                (a, b) =>
+                    a.cost -
+                    b.cost
+            )
+
+            .slice(
+                0,
+                5
+            );
+
+
+    if (
+        !ranked.length
+    ) {
 
         container.innerHTML =
-            `<p class="payment-note">No stations available to compare right now.</p>`;
+            `
+                <p class="payment-note">
+                    No stations available to compare right now.
+                </p>
+            `;
 
         return;
 
     }
 
 
-    container.innerHTML = ranked.map(entry => `
+    container.innerHTML =
+        ranked
+            .map(
+                entry => `
 
-        <div class="compare-station-row">
+                    <div class="
+                        compare-station-row
+                    ">
 
-            <div>
-                <strong>${entry.station.name}</strong>
-                <span>${entry.station.power} kW · ₹${entry.station.price}/kWh</span>
-            </div>
+                        <div>
 
-            <div class="compare-station-figures">
+                            <strong>
+                                ${entry.station.name}
+                            </strong>
 
-                <span class="compare-cost">
-                    ₹${Math.round(entry.cost)}
-                </span>
+                            <span>
+                                ${entry.station.power}
+                                kW ·
+                                ₹${entry.station.price}
+                                /kWh
+                            </span>
 
-                <span class="compare-time ${entry.fitsInTime ? "" : "compare-time-warn"}">
-                    ${Math.max(1, Math.round(entry.timeNeeded))} min
-                    ${hasDuration && !entry.fitsInTime ? " · over your time" : ""}
-                </span>
+                        </div>
 
-            </div>
 
-        </div>
+                        <div class="
+                            compare-station-figures
+                        ">
 
-    `).join("");
+                            <span class="
+                                compare-cost
+                            ">
+                                ₹${Math.round(
+                                    entry.cost
+                                )}
+                            </span>
+
+
+                            <span class="
+                                compare-time
+                                ${
+                                    entry.fitsInTime
+                                    ? ""
+                                    : "compare-time-warn"
+                                }
+                            ">
+                                ${
+                                    Math.max(
+                                        1,
+                                        Math.round(
+                                            entry.timeNeeded
+                                        )
+                                    )
+                                }
+                                min
+
+                                ${
+                                    hasDuration &&
+                                    !entry.fitsInTime
+                                    ? " · over your time"
+                                    : ""
+                                }
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                `
+            )
+            .join("");
 
 }
 
 
 /* =========================================================
-   LIVE AVAILABILITY SIMULATION
+   LIVE AVAILABILITY
    ========================================================= */
 
 function simulateLiveUpdates() {
 
-    setInterval(() => {
+    setInterval(
+        () => {
 
-        const station =
-            stations[
-                Math.floor(
-                    Math.random() *
-                    stations.length
-                )
-            ];
-
-
-        if (!station) return;
+            const station =
+                stations[
+                    Math.floor(
+                        Math.random() *
+                        stations.length
+                    )
+                ];
 
 
-        const change =
-            Math.random() > 0.5
+            if (!station)
+                return;
+
+
+            const change =
+                Math.random() >
+                0.5
                 ? 1
                 : -1;
 
 
-        station.available =
-            Math.max(
-                0,
-                Math.min(
-                    station.total,
-                    station.available + change
-                )
-            );
+            station.available =
+                Math.max(
+                    0,
+                    Math.min(
+                        station.total,
+                        station.available +
+                        change
+                    )
+                );
 
 
-        const visible =
-            filteredStations.some(
-                s => s.id === station.id
-            );
+            const visible =
+                filteredStations.some(
+                    s =>
+                        s.id ===
+                        station.id
+                );
 
 
-        if (visible) {
+            if (visible) {
 
-            renderStations();
+                renderStations();
 
-        }
+            }
 
-
-    }, 10000);
+        },
+        10000
+    );
 
 }
 
@@ -3610,12 +6981,20 @@ function updateStats() {
    HIGHLIGHT CARD
    ========================================================= */
 
-function highlightCard(id) {
+function highlightCard(
+    id
+) {
 
     document
-        .querySelectorAll(".station-card")
-        .forEach(card =>
-            card.classList.remove("selected")
+        .querySelectorAll(
+            ".station-card"
+        )
+        .forEach(
+            card =>
+                card.classList
+                .remove(
+                    "selected"
+                )
         );
 
 
@@ -3627,11 +7006,18 @@ function highlightCard(id) {
 
     if (card) {
 
-        card.classList.add("selected");
+        card.classList.add(
+            "selected"
+        );
+
 
         card.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest"
+            behavior:
+                "smooth",
+
+            block:
+                "nearest"
+
         });
 
     }
@@ -3646,30 +7032,52 @@ function highlightCard(id) {
 let toastTimeout;
 
 
-function showToast(title, message) {
+function showToast(
+    title,
+    message
+) {
 
-    document.getElementById(
-        "toastTitle"
-    ).textContent = title;
-
-
-    document.getElementById(
-        "toastMessage"
-    ).textContent = message;
-
-
-    toast.classList.add("show");
+    document
+        .getElementById(
+            "toastTitle"
+        )
+        .textContent =
+        title;
 
 
-    clearTimeout(toastTimeout);
+    document
+        .getElementById(
+            "toastMessage"
+        )
+        .textContent =
+        message;
+
+
+    toast
+        .classList
+        .add(
+            "show"
+        );
+
+
+    clearTimeout(
+        toastTimeout
+    );
 
 
     toastTimeout =
-        setTimeout(() => {
+        setTimeout(
+            () => {
 
-            toast.classList.remove("show");
+                toast
+                    .classList
+                    .remove(
+                        "show"
+                    );
 
-        }, 3500);
+            },
+            3500
+        );
 
 }
 
@@ -3686,7 +7094,9 @@ function getToday() {
 
     return date
         .toISOString()
-        .split("T")[0];
+        .split(
+            "T"
+        )[0];
 
 }
 
@@ -3716,13 +7126,22 @@ function debounce(
 
     let timeout;
 
-    return (...args) => {
 
-        clearTimeout(timeout);
+    return (
+        ...args
+    ) => {
+
+        clearTimeout(
+            timeout
+        );
+
 
         timeout =
             setTimeout(
-                () => callback(...args),
+                () =>
+                    callback(
+                        ...args
+                    ),
                 delay
             );
 
@@ -3738,14 +7157,24 @@ function debounce(
 function setupEvents() {
 
     document
-        .getElementById("clearSearch")
+        .getElementById(
+            "clearSearch"
+        )
         .addEventListener(
             "click",
             () => {
 
-                searchInput.value = "";
+                searchInput.value =
+                    "";
 
-                document.getElementById("searchSuggestions").classList.remove("open");
+                document
+                    .getElementById(
+                        "searchSuggestions"
+                    )
+                    .classList
+                    .remove(
+                        "open"
+                    );
 
                 filteredStations =
                     [...stations];
@@ -3757,7 +7186,9 @@ function setupEvents() {
 
 
     document
-        .getElementById("profileBtn")
+        .getElementById(
+            "profileBtn"
+        )
         .addEventListener(
             "click",
             () => {
@@ -3767,171 +7198,575 @@ function setupEvents() {
             }
         );
 
-    document
-        .getElementById("ordersBtn")
-        .addEventListener("click", openOrders);
 
     document
-        .getElementById("logoutBtn")
-        .addEventListener("click", logout);
+        .getElementById(
+            "ordersBtn"
+        )
+        .addEventListener(
+            "click",
+            openOrders
+        );
+
 
     document
-        .getElementById("savedPlacesBtn")
-        .addEventListener("click", () => {
-            document.getElementById("savedPlacesPanel").classList.toggle("open");
-        });
+        .getElementById(
+            "logoutBtn"
+        )
+        .addEventListener(
+            "click",
+            logout
+        );
 
-    // FIX: the calculator icon (#calculatorBtn) had no click handler at all —
-    // openCalculator() existed but nothing ever called it, so the button did
-    // nothing when clicked.
-    document
-        .getElementById("calculatorBtn")
-        .addEventListener("click", openCalculator);
 
     document
-        .getElementById("closeSavedPlaces")
-        .addEventListener("click", () => {
-            document.getElementById("savedPlacesPanel").classList.remove("open");
-        });
+        .getElementById(
+            "savedPlacesBtn"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                document
+                    .getElementById(
+                        "savedPlacesPanel"
+                    )
+                    .classList
+                    .toggle(
+                        "open"
+                    );
+
+            }
+        );
+
 
     document
-        .querySelectorAll(".saved-place-actions button")
-        .forEach(button => {
-            button.addEventListener("click", () => saveMapCenter(button.dataset.place));
-        });
+        .getElementById(
+            "calculatorBtn"
+        )
+        .addEventListener(
+            "click",
+            openCalculator
+        );
+
+
+    document
+        .getElementById(
+            "closeSavedPlaces"
+        )
+        .addEventListener(
+            "click",
+            () => {
+
+                document
+                    .getElementById(
+                        "savedPlacesPanel"
+                    )
+                    .classList
+                    .remove(
+                        "open"
+                    );
+
+            }
+        );
+
+
+    document
+        .querySelectorAll(
+            ".saved-place-actions button"
+        )
+        .forEach(
+            button => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        saveMapCenter(
+                            button.dataset
+                                .place
+                        );
+
+                    }
+                );
+
+            }
+        );
 
 }
 
 
 /* =========================================================
-   AUTHENTICATION & ACCOUNT
+   AUTHENTICATION
    ========================================================= */
 
 function initializeAuth() {
 
-    const savedSession = localStorage.getItem("voltmap-session");
+    const savedSession =
+        localStorage.getItem(
+            "voltmap-session"
+        );
+
 
     if (savedSession) {
+
         try {
-            currentUser = JSON.parse(savedSession);
+
+            currentUser =
+                JSON.parse(
+                    savedSession
+                );
+
+
             applyCurrentUser();
-            document.getElementById("authOverlay").classList.add("hidden");
+
+
+            document
+                .getElementById(
+                    "authOverlay"
+                )
+                .classList
+                .add(
+                    "hidden"
+                );
+
         }
+
         catch {
-            localStorage.removeItem("voltmap-session");
+
+            localStorage
+                .removeItem(
+                    "voltmap-session"
+                );
+
         }
+
     }
 
-    document.getElementById("authForm").addEventListener("submit", submitAuth);
-    document.getElementById("authModeToggle").addEventListener("click", toggleAuthMode);
-    document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
+
+    document
+        .getElementById(
+            "authForm"
+        )
+        .addEventListener(
+            "submit",
+            submitAuth
+        );
+
+
+    document
+        .getElementById(
+            "authModeToggle"
+        )
+        .addEventListener(
+            "click",
+            toggleAuthMode
+        );
+
+
+    document
+        .getElementById(
+            "forgotPasswordBtn"
+        )
+        .addEventListener(
+            "click",
+            forgotPassword
+        );
 
 }
 
 
 function toggleAuthMode() {
 
-    const form = document.getElementById("authForm");
-    const signUp = !form.dataset.mode || form.dataset.mode === "signin";
+    const form =
+        document.getElementById(
+            "authForm"
+        );
 
-    form.dataset.mode = signUp ? "signup" : "signin";
-    document.querySelector(".auth-name-field").hidden = !signUp;
-    document.getElementById("authName").required = signUp;
-    document.getElementById("authTitle").textContent = signUp ? "Create your account" : "Sign in to VoltMap";
-    document.getElementById("authEyebrow").textContent = signUp ? "GET STARTED" : "WELCOME BACK";
-    document.getElementById("authDescription").textContent = signUp ? "Create an account to manage bookings and payments." : "Choose your account type and sign in to find a charger.";
-    document.getElementById("authSubmit").textContent = signUp ? "Create account" : "Sign in";
-    document.getElementById("authModeToggle").textContent = signUp ? "Already have an account? Sign in" : "Create an account";
-    document.getElementById("authError").textContent = "";
-    document.getElementById("authPassword").autocomplete = signUp ? "new-password" : "current-password";
+
+    const signUp =
+        !form.dataset.mode ||
+        form.dataset.mode ===
+        "signin";
+
+
+    form.dataset.mode =
+        signUp
+        ? "signup"
+        : "signin";
+
+
+    document
+        .querySelector(
+            ".auth-name-field"
+        )
+        .hidden =
+        !signUp;
+
+
+    document
+        .getElementById(
+            "authName"
+        )
+        .required =
+        signUp;
+
+
+    document
+        .getElementById(
+            "authTitle"
+        )
+        .textContent =
+        signUp
+        ? "Create your account"
+        : "Sign in to VoltMap";
+
+
+    document
+        .getElementById(
+            "authEyebrow"
+        )
+        .textContent =
+        signUp
+        ? "GET STARTED"
+        : "WELCOME BACK";
+
+
+    document
+        .getElementById(
+            "authDescription"
+        )
+        .textContent =
+        signUp
+        ? "Create an account to manage bookings and payments."
+        : "Choose your account type and sign in to find a charger.";
+
+
+    document
+        .getElementById(
+            "authSubmit"
+        )
+        .textContent =
+        signUp
+        ? "Create account"
+        : "Sign in";
+
+
+    document
+        .getElementById(
+            "authModeToggle"
+        )
+        .textContent =
+        signUp
+        ? "Already have an account? Sign in"
+        : "Create an account";
+
+
+    document
+        .getElementById(
+            "authError"
+        )
+        .textContent =
+        "";
+
+
+    document
+        .getElementById(
+            "authPassword"
+        )
+        .autocomplete =
+        signUp
+        ? "new-password"
+        : "current-password";
 
 }
 
 
-async function submitAuth(event) {
+async function submitAuth(
+    event
+) {
 
     event.preventDefault();
 
-    const form = event.currentTarget;
-    const signUp = form.dataset.mode === "signup";
-    const role = document.getElementById("authRole").value;
-    const email = document.getElementById("authEmail").value.trim().toLowerCase();
-    const password = document.getElementById("authPassword").value;
-    const name = document.getElementById("authName").value.trim();
-    const error = document.getElementById("authError");
 
-    if (!email || !email.includes("@") || password.length < 6 || (signUp && !name)) {
-        error.textContent = "Enter a valid email, a password of at least 6 characters, and every required field.";
+    const form =
+        event.currentTarget;
+
+
+    const signUp =
+        form.dataset.mode ===
+        "signup";
+
+
+    const role =
+        document
+            .getElementById(
+                "authRole"
+            )
+            .value;
+
+
+    const email =
+        document
+            .getElementById(
+                "authEmail"
+            )
+            .value
+            .trim()
+            .toLowerCase();
+
+
+    const password =
+        document
+            .getElementById(
+                "authPassword"
+            )
+            .value;
+
+
+    const name =
+        document
+            .getElementById(
+                "authName"
+            )
+            .value
+            .trim();
+
+
+    const error =
+        document
+            .getElementById(
+                "authError"
+            );
+
+
+    if (
+        !email ||
+        !email.includes("@") ||
+        password.length < 6 ||
+        (
+            signUp &&
+            !name
+        )
+    ) {
+
+        error.textContent =
+            "Enter a valid email, a password of at least 6 characters, and every required field.";
+
         return;
+
     }
+
 
     let account;
 
+
     try {
 
-        const result = await apiRequest(
-            signUp ? "/auth/signup" : "/auth/login",
-            {
-                method: "POST",
-                body: JSON.stringify({ name, email, password, role })
-            }
-        );
+        const result =
+            await apiRequest(
+                signUp
+                    ? "/auth/signup"
+                    : "/auth/login",
 
-        account = result.data;
+                {
+                    method:
+                        "POST",
+
+                    body:
+                        JSON.stringify({
+                            name,
+                            email,
+                            password,
+                            role
+                        })
+
+                }
+            );
+
+
+        account =
+            result.data;
 
     }
-    catch (backendError) {
 
-        if (backendError.isApiError) {
-            error.textContent = backendError.message;
+    catch (
+        backendError
+    ) {
+
+        if (
+            backendError.isApiError
+        ) {
+
+            error.textContent =
+                backendError.message;
+
             return;
+
         }
 
-        // Offline fallback keeps the static preview usable. The API path above
-        // is used whenever the backend server is running.
-        const accounts = JSON.parse(localStorage.getItem("voltmap-accounts") || "[]");
+
+        const accounts =
+            JSON.parse(
+                localStorage.getItem(
+                    "voltmap-accounts"
+                ) || "[]"
+            );
+
 
         if (signUp) {
-            if (accounts.some(item => item.email === email && item.role === role)) {
-                error.textContent = "An account with this email and role already exists. Sign in instead.";
+
+            if (
+                accounts.some(
+                    item =>
+                        item.email ===
+                        email &&
+                        item.role ===
+                        role
+                )
+            ) {
+
+                error.textContent =
+                    "An account with this email and role already exists. Sign in instead.";
+
                 return;
+
             }
 
-            account = { name, email, role, password };
-            accounts.push(account);
-            localStorage.setItem("voltmap-accounts", JSON.stringify(accounts));
+
+            account = {
+
+                name,
+                email,
+                role,
+                password
+
+            };
+
+
+            accounts.push(
+                account
+            );
+
+
+            localStorage.setItem(
+                "voltmap-accounts",
+                JSON.stringify(
+                    accounts
+                )
+            );
+
         }
+
         else {
-            account = accounts.find(item => item.email === email && item.role === role && item.password === password);
+
+            account =
+                accounts.find(
+                    item =>
+                        item.email ===
+                        email &&
+
+                        item.role ===
+                        role &&
+
+                        item.password ===
+                        password
+                );
+
+
             if (!account) {
-                error.textContent = "Start the backend server or create an offline preview account.";
+
+                error.textContent =
+                    "Start the backend server or create an offline preview account.";
+
                 return;
+
             }
+
         }
 
     }
 
-    currentUser = { name: account.name, email: account.email, role: account.role };
-    localStorage.setItem("voltmap-session", JSON.stringify(currentUser));
+
+    currentUser = {
+
+        name:
+            account.name,
+
+        email:
+            account.email,
+
+        role:
+            account.role
+
+    };
+
+
+    localStorage.setItem(
+        "voltmap-session",
+        JSON.stringify(
+            currentUser
+        )
+    );
+
+
     applyCurrentUser();
-    document.getElementById("authOverlay").classList.add("hidden");
-    showToast("Welcome to VoltMap", `Signed in as ${currentUser.role}.`);
+
+
+    document
+        .getElementById(
+            "authOverlay"
+        )
+        .classList
+        .add(
+            "hidden"
+        );
+
+
+    showToast(
+        "Welcome to VoltMap",
+        `Signed in as ${currentUser.role}.`
+    );
 
 }
 
 
 function forgotPassword() {
 
-    const email = document.getElementById("authEmail").value.trim();
+    const email =
+        document
+            .getElementById(
+                "authEmail"
+            )
+            .value
+            .trim();
+
 
     if (email) {
-        syncToBackend("/auth/forgot-password", {
-            method: "POST",
-            body: JSON.stringify({ email })
-        });
+
+        syncToBackend(
+            "/auth/forgot-password",
+            {
+                method:
+                    "POST",
+
+                body:
+                    JSON.stringify({
+                        email
+                    })
+
+            }
+        );
+
     }
 
-    document.getElementById("authError").textContent = email
+
+    document
+        .getElementById(
+            "authError"
+        )
+        .textContent =
+        email
         ? "Password-reset request recorded. Connect an email provider to send the reset link."
         : "Enter your email address first to reset your password.";
 
@@ -3940,198 +7775,730 @@ function forgotPassword() {
 
 function applyCurrentUser() {
 
-    if (!currentUser) return;
+    if (!currentUser)
+        return;
 
-    const initials = currentUser.name.split(" ").map(part => part[0]).join("").slice(0, 2).toUpperCase();
-    document.querySelector(".avatar").textContent = initials;
-    document.querySelector("#profileBtn span").textContent = currentUser.name.split(" ")[0];
+
+    const initials =
+        currentUser.name
+            .split(" ")
+            .map(
+                part =>
+                    part[0]
+            )
+            .join("")
+            .slice(
+                0,
+                2
+            )
+            .toUpperCase();
+
+
+    document
+        .querySelector(
+            ".avatar"
+        )
+        .textContent =
+        initials;
+
+
+    document
+        .querySelector(
+            "#profileBtn span"
+        )
+        .textContent =
+        currentUser.name
+            .split(" ")[0];
 
 }
 
 
 function openSettings() {
 
-    if (!currentUser) return;
+    if (!currentUser)
+        return;
 
-    document.getElementById("settingsUser").innerHTML = `
-        <strong>${currentUser.name}</strong>
-        <span>${currentUser.email} · ${currentUser.role === "admin" ? "Administrator" : "Driver"}</span>
-    `;
-    document.getElementById("settingsModal").classList.add("open");
+
+    document
+        .getElementById(
+            "settingsUser"
+        )
+        .innerHTML = `
+
+            <strong>
+                ${currentUser.name}
+            </strong>
+
+            <span>
+                ${currentUser.email}
+                ·
+                ${
+                    currentUser.role === "admin"
+                    ? "Administrator"
+                    : "Driver"
+                }
+            </span>
+
+        `;
+
+
+    document
+        .getElementById(
+            "settingsModal"
+        )
+        .classList
+        .add(
+            "open"
+        );
 
 }
 
 
 function logout() {
 
-    localStorage.removeItem("voltmap-session");
-    currentUser = null;
-    document.getElementById("settingsModal").classList.remove("open");
-    document.getElementById("authForm").reset();
-    if (document.getElementById("authForm").dataset.mode === "signup") {
+    localStorage.removeItem(
+        "voltmap-session"
+    );
+
+
+    currentUser =
+        null;
+
+
+    document
+        .getElementById(
+            "settingsModal"
+        )
+        .classList
+        .remove(
+            "open"
+        );
+
+
+    document
+        .getElementById(
+            "authForm"
+        )
+        .reset();
+
+
+    if (
+        document
+            .getElementById(
+                "authForm"
+            )
+            .dataset
+            .mode ===
+        "signup"
+    ) {
+
         toggleAuthMode();
+
     }
-    document.getElementById("authError").textContent = "";
-    document.getElementById("authOverlay").classList.remove("hidden");
+
+
+    document
+        .getElementById(
+            "authError"
+        )
+        .textContent =
+        "";
+
+
+    document
+        .getElementById(
+            "authOverlay"
+        )
+        .classList
+        .remove(
+            "hidden"
+        );
 
 }
 
 
 /* =========================================================
-   MY ORDERS & RATINGS
+   MY ORDERS
    ========================================================= */
 
 function openOrders() {
 
     renderOrders();
-    document.getElementById("ordersModal").classList.add("open");
+
+    document
+        .getElementById(
+            "ordersModal"
+        )
+        .classList
+        .add(
+            "open"
+        );
 
 }
 
 
 function getUserOrders() {
 
-    if (!currentUser) return [];
-    return JSON.parse(localStorage.getItem("voltmap-orders") || "[]")
-        .filter(order => order.userEmail === currentUser.email);
+    if (!currentUser)
+        return [];
+
+
+    return JSON.parse(
+        localStorage.getItem(
+            "voltmap-orders"
+        ) || "[]"
+    )
+        .filter(
+            order =>
+                order.userEmail ===
+                currentUser.email
+        );
 
 }
 
 
 function renderOrders() {
 
-    const orders = getUserOrders();
-    const content = document.getElementById("ordersContent");
+    const orders =
+        getUserOrders();
+
+
+    const content =
+        document
+            .getElementById(
+                "ordersContent"
+            );
+
 
     if (!orders.length) {
-        content.innerHTML = `<div class="orders-empty"><i class="fa-regular fa-calendar-xmark"></i><p>No bookings yet. Your paid reservations will appear here.</p></div>`;
+
+        content.innerHTML = `
+
+            <div class="orders-empty">
+
+                <i class="
+                    fa-regular
+                    fa-calendar-xmark
+                "></i>
+
+                <p>
+                    No bookings yet.
+                    Your paid reservations
+                    will appear here.
+                </p>
+
+            </div>
+
+        `;
+
         return;
+
     }
 
-    content.innerHTML = orders.map(order => `
-        <article class="order-card">
-            <div class="order-card-head">
-                <div><h3>${order.stationName}</h3><p>${order.id} · ${order.chargerName}</p></div>
-                <span class="order-status">${order.status}</span>
-            </div>
-            <div class="order-meta"><span><i class="fa-regular fa-calendar"></i> ${order.date} · ${order.time}</span><span>₹${order.amount} · ${order.paymentMethod}</span></div>
-            <div class="rating-row">
-                <span>${order.rating ? `Your rating: ${order.rating}/5` : "Rate this charging session"}</span>
-                <div class="rating-stars">
-                    ${[1, 2, 3, 4, 5].map(star => `<button onclick="rateOrder('${order.id}', ${star})" aria-label="Rate ${star} stars">${star <= (order.rating || 0) ? "★" : "☆"}</button>`).join("")}
-                </div>
-            </div>
-        </article>
-    `).join("");
 
-}
+    content.innerHTML =
+        orders
+            .map(
+                order => `
+
+                    <article
+                        class="order-card"
+                    >
+
+                        <div
+                            class="
+                                order-card-head
+                            "
+                        >
+
+                            <div>
+
+                                <h3>
+                                    ${escapeHtmlSafe(
+                                        order.stationName
+                                    )}
+                                </h3>
+
+                                <p>
+
+                                    ${
+                                        escapeHtmlSafe(
+                                            order.bookingId ||
+                                            order.id
+                                        )
+                                    }
+
+                                    ·
+
+                                    ${
+                                        escapeHtmlSafe(
+                                            order.chargerName ||
+                                            "Charger"
+                                        )
+                                    }
+
+                                </p>
+
+                            </div>
 
 
-function rateOrder(id, rating) {
+                            <span
+                                class="
+                                    order-status
+                                "
+                            >
+                                ${
+                                    escapeHtmlSafe(
+                                        order.status ||
+                                        "Confirmed"
+                                    )
+                                }
+                            </span>
 
-    const orders = JSON.parse(localStorage.getItem("voltmap-orders") || "[]");
-    const order = orders.find(item => item.id === id && item.userEmail === currentUser?.email);
-    if (!order) return;
+                        </div>
 
-    order.rating = rating;
-    localStorage.setItem("voltmap-orders", JSON.stringify(orders));
 
-    syncToBackend(`/orders/${id}/rating`, {
-        method: "PATCH",
-        body: JSON.stringify({ userEmail: currentUser.email, rating })
-    });
+                        <div
+                            class="
+                                order-meta
+                            "
+                        >
 
-    renderOrders();
-    showToast("Thank you for your rating", `${rating}/5 saved for ${order.stationName}.`);
+                            <span>
+
+                                <i class="
+                                    fa-regular
+                                    fa-calendar
+                                "></i>
+
+                                ${escapeHtmlSafe(
+                                    order.date
+                                )}
+
+                                ·
+
+                                ${escapeHtmlSafe(
+                                    order.time
+                                )}
+
+                            </span>
+
+
+                            <span>
+
+                                ₹${Number(
+                                    order.amount ||
+                                    0
+                                )}
+
+                                ·
+
+                                ${escapeHtmlSafe(
+                                    order.paymentMethod ||
+                                    ""
+                                )}
+
+                            </span>
+
+                        </div>
+
+
+                        <div
+                            class="
+                                order-bottom
+                            "
+                        >
+
+                            <span>
+
+                                Payment:
+
+                                <strong
+                                    class="paid"
+                                >
+                                    ${
+                                        escapeHtmlSafe(
+                                            order.paymentStatus ||
+                                            "Paid"
+                                        )
+                                    }
+                                </strong>
+
+                            </span>
+
+
+                            ${
+                                order.rating
+                                ? `
+                                    <span>
+                                        Your rating:
+                                        ${order.rating}/5
+                                    </span>
+                                `
+                                : `
+                                    <button
+                                        class="rate-btn"
+                                        onclick="
+                                            rateOrder(
+                                                '${escapeAttribute(
+                                                    order.bookingId ||
+                                                    order.id
+                                                )}'
+                                            )
+                                        "
+                                    >
+                                        <i class="
+                                            fa-solid
+                                            fa-star
+                                        "></i>
+                                        Rate booking
+                                    </button>
+                                `
+                            }
+
+                        </div>
+
+
+                        <div
+                            style="
+                                margin-top:8px;
+                                font-family:var(--font-mono);
+                                font-size:8px;
+                                color:var(--faint);
+                            "
+                        >
+                            Booking ID:
+                            ${
+                                escapeHtmlSafe(
+                                    order.bookingId ||
+                                    order.id
+                                )
+                            }
+                        </div>
+
+                    </article>
+
+                `
+            )
+            .join("");
 
 }
 
 
 /* =========================================================
-   SOCKET.IO — READY FOR NODE.JS
+   RATE ORDER
    ========================================================= */
 
-/*
+function rateOrder(
+    id
+) {
 
-When your Node.js server is ready:
-
-const socket = io("http://localhost:5000");
-
-socket.on("station:availability", data => {
-
-    const station =
-        stations.find(
-            s => s.id === data.stationId
+    const orders =
+        JSON.parse(
+            localStorage.getItem(
+                "voltmap-orders"
+            ) || "[]"
         );
 
-    if (!station) return;
 
-    station.available =
-        data.availableSlots;
-
-    renderStations();
-
-});
-
-*/
-
-
-/* =========================================================
-   FUTURE API FUNCTIONS
-   ========================================================= */
-
-/*
-
-async function fetchStations() {
-
-    const response =
-        await fetch(
-            `${API_BASE}/stations`
+    const order =
+        orders.find(
+            item =>
+                (
+                    item.id === id ||
+                    item.bookingId === id
+                ) &&
+                item.userEmail ===
+                currentUser?.email
         );
 
-    const data =
-        await response.json();
 
-    stations.length = 0;
-
-    stations.push(...data);
-
-    filteredStations =
-        [...stations];
-
-    renderStations();
-
-}
+    if (!order)
+        return;
 
 
-async function createBooking(data) {
-
-    const token =
-        localStorage.getItem(
-            "voltmap-token"
+    const rating =
+        prompt(
+            "Rate your charging experience from 1 to 5:"
         );
 
-    const response =
-        await fetch(
-            `${API_BASE}/bookings`,
+
+    if (
+        rating ===
+        null
+    )
+        return;
+
+
+    const value =
+        Number(
+            rating
+        );
+
+
+    if (
+        value < 1 ||
+        value > 5 ||
+        Number.isNaN(value)
+    ) {
+
+        showToast(
+            "Invalid rating",
+            "Please enter a rating between 1 and 5."
+        );
+
+        return;
+
+    }
+
+
+    order.rating =
+        value;
+
+
+    localStorage.setItem(
+        "voltmap-orders",
+        JSON.stringify(
+            orders
+        )
+    );
+
+
+    if (
+        order.id
+    ) {
+
+        syncToBackend(
+            `/orders/${encodeURIComponent(
+                order.id
+            )}/rating`,
             {
-                method: "POST",
-
-                headers: {
-                    "Content-Type":
-                        "application/json",
-
-                    Authorization:
-                        `Bearer ${token}`
-                },
+                method:
+                    "PATCH",
 
                 body:
-                    JSON.stringify(data)
+                    JSON.stringify({
+
+                        userEmail:
+                            currentUser.email,
+
+                        rating:
+                            value
+
+                    })
+
             }
         );
 
-    return response.json();
+    }
+
+
+    renderOrders();
+
+
+    showToast(
+        "Thank you for your rating",
+        `${value}/5 saved for ${order.stationName}.`
+    );
 
 }
 
-*/
+
+/* =========================================================
+   HELPER: ATTRIBUTE ESCAPE
+   ========================================================= */
+
+function escapeAttribute(
+    value
+) {
+
+    return String(
+        value || ""
+    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#39;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        );
+
+}
+
+
+/* =========================================================
+   SOCKET.IO
+   ========================================================= */
+
+let socket = null;
+
+
+function initializeSocket() {
+
+    if (
+        typeof io !==
+        "function"
+    ) {
+
+        return;
+
+    }
+
+
+    try {
+
+        socket =
+            io(
+                "http://localhost:5000"
+            );
+
+
+        socket.on(
+            "station:availability",
+            data => {
+
+                if (!data)
+                    return;
+
+
+                const station =
+                    stations.find(
+                        item =>
+                            item.id ===
+                            data.stationId
+                    );
+
+
+                if (!station)
+                    return;
+
+
+                station.available =
+                    data.availableSlots;
+
+
+                renderStations();
+
+            }
+        );
+
+
+        socket.on(
+            "stations:update",
+            serverStations => {
+
+                if (
+                    !Array.isArray(
+                        serverStations
+                    )
+                ) {
+                    return;
+                }
+
+
+                serverStations.forEach(
+                    serverStation => {
+
+                        const localStation =
+                            stations.find(
+                                station =>
+                                    String(
+                                        station.id
+                                    ) ===
+                                    String(
+                                        serverStation.id
+                                    )
+                            );
+
+
+                        if (!localStation)
+                            return;
+
+
+                        if (
+                            serverStation.availableSlots !==
+                            undefined
+                        ) {
+
+                            localStation.available =
+                                Number(
+                                    serverStation.availableSlots
+                                );
+
+                        }
+
+                    }
+                );
+
+
+                renderStations();
+
+            }
+        );
+
+
+        socket.on(
+            "connect",
+            () => {
+
+                console.log(
+                    "⚡ VoltMap Socket.IO connected"
+                );
+
+            }
+        );
+
+
+        socket.on(
+            "disconnect",
+            () => {
+
+                console.log(
+                    "VoltMap Socket.IO disconnected"
+                );
+
+            }
+        );
+
+    }
+    catch (
+        socketError
+    ) {
+
+        console.warn(
+            "Socket.IO initialization failed:",
+            socketError
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   START SOCKET
+   ========================================================= */
+
+try {
+
+    initializeSocket();
+
+}
+catch {
+
+    // Socket remains optional for local frontend operation.
+
+}

@@ -5,7 +5,7 @@
 1. Open a terminal in `Backend`.
 2. Run `npm install` once.
 3. Run `npm start`.
-4. Open `http://localhost:5000`.
+4. Open `http://localhost:5500`.
 
 The server delivers both the VoltMap frontend and its API on port 5000.
 
