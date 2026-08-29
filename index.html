@@ -58,9 +58,10 @@
                 type="text"
                 id="searchInput"
                 placeholder="Search charging stations, locations..."
+                autocomplete="off"
             >
 
-            <button id="clearSearch" class="clear-search">
+            <button id="clearSearch" class="clear-search" type="button" style="display:none;">
                 <i class="fa-solid fa-xmark"></i>
             </button>
 
@@ -71,7 +72,7 @@
 
         <div class="top-actions">
 
-            <button class="location-btn" id="locationBtn">
+            <button class="location-btn" id="locationBtn" type="button">
                 <i class="fa-solid fa-location-crosshairs"></i>
                 <span>Near me</span>
             </button>
@@ -81,23 +82,27 @@
                 LIVE
             </div>
 
-            <button class="icon-btn" id="notificationBtn">
-                <i class="fa-regular fa-bell"></i>
-                <span class="notification-count">3</span>
+            <button class="icon-btn" id="calculatorBtn" type="button" title="Cost calculator">
+                <i class="fa-solid fa-calculator"></i>
             </button>
 
-            <button class="icon-btn" id="themeBtn">
+            <button class="icon-btn" id="notificationBtn" type="button">
+                <i class="fa-regular fa-bell"></i>
+                <span class="notification-count" id="notificationCount">3</span>
+            </button>
+
+            <button class="icon-btn" id="themeBtn" type="button">
                 <i class="fa-solid fa-sun"></i>
             </button>
 
-            <button class="orders-btn" id="ordersBtn">
+            <button class="orders-btn" id="ordersBtn" type="button">
                 <i class="fa-regular fa-calendar-check"></i>
                 <span>My orders</span>
             </button>
 
-            <button class="profile-btn" id="profileBtn">
-                <div class="avatar">SM</div>
-                <span>Sachin</span>
+            <button class="profile-btn" id="profileBtn" type="button">
+                <div class="avatar" id="profileAvatar">?</div>
+                <span id="profileName">Guest</span>
                 <i class="fa-solid fa-chevron-down"></i>
             </button>
 
@@ -120,12 +125,12 @@
                 <div>
                     <h1>Find a charger</h1>
                     <p>
-                        <span id="stationCount">12</span>
+                        <span id="stationCount">0</span>
                         stations available
                     </p>
                 </div>
 
-                <button class="filter-open-btn" id="filterBtn">
+                <button class="filter-open-btn" id="filterBtn" type="button">
                     <i class="fa-solid fa-sliders"></i>
                     Filters
                 </button>
@@ -137,21 +142,21 @@
 
             <div class="quick-filters">
 
-                <button class="quick-filter active" data-filter="all">
+                <button class="quick-filter active" data-filter="all" type="button">
                     All
                 </button>
 
-                <button class="quick-filter" data-filter="available">
+                <button class="quick-filter" data-filter="available" type="button">
                     <span class="small-dot green"></span>
                     Available
                 </button>
 
-                <button class="quick-filter" data-filter="fast">
+                <button class="quick-filter" data-filter="fast" type="button">
                     <i class="fa-solid fa-bolt"></i>
                     Fast
                 </button>
 
-                <button class="quick-filter" data-filter="cheap">
+                <button class="quick-filter" data-filter="cheap" type="button">
                     <i class="fa-solid fa-indian-rupee-sign"></i>
                     Cheap
                 </button>
@@ -163,13 +168,14 @@
 
             <div class="sort-row">
 
-                <span>Recommended</span>
+                <span>Sort by</span>
 
                 <select id="sortSelect">
                     <option value="recommended">Recommended</option>
                     <option value="distance">Nearest</option>
-                    <option value="price">Cheapest</option>
-                    <option value="speed">Fastest</option>
+                    <option value="price-low">Cheapest</option>
+                    <option value="price-high">Priciest</option>
+                    <option value="speed-high">Fastest</option>
                     <option value="rating">Highest rated</option>
                     <option value="availability">Most available</option>
                 </select>
@@ -195,15 +201,15 @@
 
             <div class="map-controls">
 
-                <button id="mapLocationBtn" title="My location">
+                <button id="mapLocationBtn" title="My location" type="button">
                     <i class="fa-solid fa-location-crosshairs"></i>
                 </button>
 
-                <button id="fullscreenBtn" title="Fullscreen">
+                <button id="fullscreenBtn" title="Fullscreen" type="button">
                     <i class="fa-solid fa-expand"></i>
                 </button>
 
-                <button id="savedPlacesBtn" title="Saved places">
+                <button id="savedPlacesBtn" title="Saved places" type="button">
                     <i class="fa-solid fa-house-circle-check"></i>
                 </button>
 
@@ -212,13 +218,13 @@
             <div class="saved-places-panel" id="savedPlacesPanel">
                 <div class="saved-places-heading">
                     <strong>Saved places</strong>
-                    <button id="closeSavedPlaces" aria-label="Close saved places"><i class="fa-solid fa-xmark"></i></button>
+                    <button id="closeSavedPlaces" aria-label="Close saved places" type="button"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <p>Move the map to your location, then save its centre.</p>
                 <div class="saved-place-actions">
-                    <button data-place="home"><i class="fa-solid fa-house"></i> Home</button>
-                    <button data-place="office"><i class="fa-solid fa-briefcase"></i> Office</button>
-                    <button data-place="college"><i class="fa-solid fa-graduation-cap"></i> College</button>
+                    <button data-place="home" type="button"><i class="fa-solid fa-house"></i> Home</button>
+                    <button data-place="office" type="button"><i class="fa-solid fa-briefcase"></i> Office</button>
+                    <button data-place="college" type="button"><i class="fa-solid fa-graduation-cap"></i> College</button>
                 </div>
             </div>
 
@@ -254,7 +260,7 @@
                 </div>
 
                 <div>
-                    <strong id="mapStationCount">12</strong>
+                    <strong id="mapStationCount">0</strong>
                     <span>chargers nearby</span>
                 </div>
 
@@ -271,7 +277,7 @@
 
     <aside class="station-drawer" id="stationDrawer">
 
-        <button class="drawer-close" id="drawerClose">
+        <button class="drawer-close" id="drawerClose" type="button">
             <i class="fa-solid fa-xmark"></i>
         </button>
 
@@ -292,7 +298,7 @@
                     <h2>Advanced filters</h2>
                 </div>
 
-                <button class="modal-close" data-close="filterModal">
+                <button class="modal-close" data-close="filterModal" type="button">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -304,15 +310,15 @@
 
                 <div class="filter-options">
 
-                    <button class="option-btn active" data-type="charger" data-value="all">
+                    <button class="option-btn active" data-type="charger" data-value="all" type="button">
                         All
                     </button>
 
-                    <button class="option-btn" data-type="charger" data-value="AC">
+                    <button class="option-btn" data-type="charger" data-value="AC" type="button">
                         AC
                     </button>
 
-                    <button class="option-btn" data-type="charger" data-value="DC">
+                    <button class="option-btn" data-type="charger" data-value="DC" type="button">
                         DC
                     </button>
 
@@ -403,22 +409,22 @@
                 <div class="amenities">
 
                     <label>
-                        <input type="checkbox" value="cafe">
+                        <input type="checkbox" value="Cafe" class="amenityCheck">
                         <span><i class="fa-solid fa-mug-hot"></i> Cafe</span>
                     </label>
 
                     <label>
-                        <input type="checkbox" value="parking">
+                        <input type="checkbox" value="Parking" class="amenityCheck">
                         <span><i class="fa-solid fa-square-parking"></i> Parking</span>
                     </label>
 
                     <label>
-                        <input type="checkbox" value="wifi">
+                        <input type="checkbox" value="Wi-Fi" class="amenityCheck">
                         <span><i class="fa-solid fa-wifi"></i> Wi-Fi</span>
                     </label>
 
                     <label>
-                        <input type="checkbox" value="restroom">
+                        <input type="checkbox" value="Restroom" class="amenityCheck">
                         <span><i class="fa-solid fa-restroom"></i> Restroom</span>
                     </label>
 
@@ -429,11 +435,11 @@
 
             <div class="modal-actions">
 
-                <button class="btn-secondary" id="clearFilters">
+                <button class="btn-secondary" id="clearFilters" type="button">
                     Clear all
                 </button>
 
-                <button class="btn-primary" id="applyFilters">
+                <button class="btn-primary" id="applyFilters" type="button">
                     Apply filters
                 </button>
 
@@ -450,30 +456,34 @@
 
         <div class="modal booking-modal">
 
-            <div class="booking-progress">
+            <button class="modal-close" data-close="bookingModal" type="button" style="position:absolute; top:17px; right:17px;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
 
-                <div class="progress-step active">
+            <div class="booking-progress" id="bookingProgress">
+
+                <div class="progress-step" data-step="1">
                     <span>1</span>
-                    Charger
+                    Details
                 </div>
 
                 <div class="progress-line"></div>
 
-                <div class="progress-step">
+                <div class="progress-step" data-step="2">
                     <span>2</span>
-                    Date
+                    Review
                 </div>
 
                 <div class="progress-line"></div>
 
-                <div class="progress-step">
+                <div class="progress-step" data-step="3">
                     <span>3</span>
-                    Vehicle
+                    Payment
                 </div>
 
                 <div class="progress-line"></div>
 
-                <div class="progress-step">
+                <div class="progress-step" data-step="4">
                     <span>4</span>
                     Confirm
                 </div>
@@ -482,30 +492,6 @@
 
 
             <div id="bookingContent"></div>
-
-        </div>
-
-    </div>
-
-
-    <!-- ================= PAYMENT MODAL ================= -->
-
-    <div class="modal-overlay" id="paymentModal">
-
-        <div class="modal payment-modal">
-
-            <div class="modal-header">
-                <div>
-                    <span class="modal-eyebrow">SECURE CHECKOUT</span>
-                    <h2>Complete payment</h2>
-                </div>
-
-                <button class="modal-close" data-close="paymentModal">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-
-            <div id="paymentContent"></div>
 
         </div>
 
@@ -524,7 +510,7 @@
                     <h2>My orders</h2>
                 </div>
 
-                <button class="modal-close" data-close="ordersModal">
+                <button class="modal-close" data-close="ordersModal" type="button">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -548,14 +534,19 @@
                     <h2>Settings</h2>
                 </div>
 
-                <button class="modal-close" data-close="settingsModal">
+                <button class="modal-close" data-close="settingsModal" type="button">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
             <div class="settings-user" id="settingsUser"></div>
 
-            <button class="logout-btn" id="logoutBtn">
+            <button class="btn-secondary full-btn" id="ordersFromSettingsBtn" type="button" style="margin-bottom:10px;">
+                <i class="fa-regular fa-calendar-check"></i>
+                My orders
+            </button>
+
+            <button class="logout-btn" id="logoutBtn" type="button">
                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 Log out
             </button>
@@ -576,14 +567,14 @@
                 <h3>Notifications</h3>
             </div>
 
-            <button id="markRead">
+            <button id="markRead" type="button">
                 Mark all read
             </button>
 
         </div>
 
 
-        <div class="notifications">
+        <div class="notifications" id="notificationsList">
 
             <div class="notification unread">
 
@@ -593,7 +584,7 @@
 
                 <div>
                     <strong>Station availability changed</strong>
-                    <p>VoltMap Energy Hub now has 6 available chargers.</p>
+                    <p>A nearby station now has more available chargers.</p>
                     <small>2 min ago</small>
                 </div>
 
@@ -607,8 +598,8 @@
                 </div>
 
                 <div>
-                    <strong>Upcoming booking</strong>
-                    <p>Your booking starts at 7:30 PM today.</p>
+                    <strong>Welcome to VoltMap</strong>
+                    <p>Sign in to start booking chargers near you.</p>
                     <small>25 min ago</small>
                 </div>
 
@@ -622,8 +613,8 @@
                 </div>
 
                 <div>
-                    <strong>Payment successful</strong>
-                    <p>Your previous charging session was completed.</p>
+                    <strong>Tip</strong>
+                    <p>Use the cost estimator to plan your charging budget.</p>
                     <small>2 hours ago</small>
                 </div>
 
@@ -647,7 +638,7 @@
                     <h2>Charging cost estimator</h2>
                 </div>
 
-                <button class="modal-close" data-close="calculatorModal">
+                <button class="modal-close" data-close="calculatorModal" type="button">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
 
@@ -659,7 +650,7 @@
                 <label>
                     Battery capacity
                     <div class="input-unit">
-                        <input type="number" id="batteryCapacity" value="40.5">
+                        <input type="number" id="batteryCapacity" value="40.5" min="1" step="0.1">
                         <span>kWh</span>
                     </div>
                 </label>
@@ -667,7 +658,7 @@
                 <label>
                     Current battery
                     <div class="input-unit">
-                        <input type="number" id="currentBattery" value="25">
+                        <input type="number" id="currentBattery" value="25" min="0" max="100">
                         <span>%</span>
                     </div>
                 </label>
@@ -675,7 +666,7 @@
                 <label>
                     Target battery
                     <div class="input-unit">
-                        <input type="number" id="targetBattery" value="80">
+                        <input type="number" id="targetBattery" value="80" min="0" max="100">
                         <span>%</span>
                     </div>
                 </label>
@@ -683,15 +674,23 @@
                 <label>
                     Price
                     <div class="input-unit">
-                        <input type="number" id="chargePrice" value="18">
+                        <input type="number" id="chargePrice" value="18" min="0" step="0.5">
                         <span>₹/kWh</span>
+                    </div>
+                </label>
+
+                <label>
+                    Available time
+                    <div class="input-unit">
+                        <input type="number" id="chargeDuration" value="30" min="1" step="1">
+                        <span>min</span>
                     </div>
                 </label>
 
             </div>
 
 
-            <button class="btn-primary full-btn" id="calculateBtn">
+            <button class="btn-primary full-btn" id="calculateBtn" type="button">
                 Calculate
             </button>
 
@@ -700,20 +699,25 @@
 
                 <div>
                     <span>Energy required</span>
-                    <strong id="energyResult">22.28 kWh</strong>
+                    <strong id="energyResult">—</strong>
                 </div>
 
                 <div>
                     <span>Estimated cost</span>
-                    <strong id="costResult">₹401</strong>
+                    <strong id="costResult">—</strong>
                 </div>
 
                 <div>
                     <span>Estimated time</span>
-                    <strong id="timeResult">25 min</strong>
+                    <strong id="timeResult">—</strong>
                 </div>
 
             </div>
+
+
+            <h4 class="calculator-compare-heading">Cheapest stations for this charge</h4>
+
+            <div class="station-compare-list" id="stationCompareResult"></div>
 
         </div>
 
@@ -740,27 +744,27 @@
 
     <nav class="mobile-nav">
 
-        <button class="active">
+        <button class="active" id="mobileMapBtn" type="button">
             <i class="fa-solid fa-map"></i>
             <span>Map</span>
         </button>
 
-        <button id="mobileExplore">
+        <button id="mobileExplore" type="button">
             <i class="fa-solid fa-compass"></i>
             <span>Explore</span>
         </button>
 
-        <button id="mobileBookings">
+        <button id="mobileBookings" type="button">
             <i class="fa-regular fa-calendar"></i>
             <span>Bookings</span>
         </button>
 
-        <button>
+        <button id="mobileFavorites" type="button">
             <i class="fa-regular fa-heart"></i>
             <span>Favorites</span>
         </button>
 
-        <button>
+        <button id="mobileProfile" type="button">
             <i class="fa-regular fa-user"></i>
             <span>Profile</span>
         </button>
@@ -804,7 +808,7 @@
 
             <label class="auth-label">
                 Email address
-                <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+                <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="username" required>
             </label>
 
             <label class="auth-label">

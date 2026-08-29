@@ -23,10 +23,20 @@ async function apiRequest(path, options = {}) {
         ...options
     });
 
-    const payload = await response.json();
+    let payload = null;
+
+    try {
+        payload = await response.json();
+    }
+    catch (parseError) {
+        // The server responded without a JSON body (for example a proxy
+        // error page). Treat this the same as a failed request instead of
+        // throwing a generic parse error that gets miscategorized below.
+        payload = {};
+    }
 
     if (!response.ok) {
-        const error = new Error(payload.message || "Request failed");
+        const error = new Error(payload.message || `Request failed (${response.status})`);
         error.isApiError = true;
         throw error;
     }
@@ -549,17 +559,41 @@ const toast =
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    initializeMap();
+    // Each step below is independent of the others. If one of them throws
+    // (for example the map's tile library failing to load on a slow or
+    // restricted connection), it must not stop the remaining steps from
+    // running — otherwise things like login/signup never get wired up.
+    try {
+        initializeMap();
+    } catch (mapError) {
+        console.error("Map failed to initialize:", mapError);
+    }
 
-    renderStations();
+    try {
+        renderStations();
+    } catch (renderError) {
+        console.error("Station list failed to render:", renderError);
+    }
 
-    setupEvents();
+    try {
+        setupEvents();
+    } catch (eventsError) {
+        console.error("UI events failed to bind:", eventsError);
+    }
 
     updateStats();
 
-    initializeTheme();
+    try {
+        initializeTheme();
+    } catch (themeError) {
+        console.error("Theme failed to initialize:", themeError);
+    }
 
-    initializeAuth();
+    try {
+        initializeAuth();
+    } catch (authError) {
+        console.error("Auth failed to initialize:", authError);
+    }
 
     simulateLiveUpdates();
 
@@ -599,11 +633,17 @@ function updateMapTheme() {
 
     const light = document.body.classList.contains("light");
 
+    // OpenStreetMap's standard tiles are free and require no API key/signup
+    // (CARTO's basemaps.cartocdn.com raster tiles now require one, which is
+    // what was showing the "API key required" watermark). Dark mode is
+    // achieved with a CSS filter on the tile layer instead of a separate
+    // dark tile server — see the "#map:not(.light-map)" rule in style.css.
     map.baseLayer = L.tileLayer(
-        `https://{s}.basemaps.cartocdn.com/${light ? "light_all" : "dark_all"}/{z}/{x}/{y}{r}.png`,
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
-            attribution: "&copy; OpenStreetMap &copy; CARTO",
-            maxZoom: 19
+            attribution: "&copy; OpenStreetMap contributors",
+            maxZoom: 19,
+            subdomains: "abc"
         }
     ).addTo(map);
 
@@ -668,6 +708,10 @@ function createMarkerIcon(station) {
    ========================================================= */
 
 function renderMarkers() {
+
+    // Nothing to draw on if the map never finished initializing (for
+    // example because the Leaflet library failed to load).
+    if (!map) return;
 
     Object.values(markers).forEach(marker => {
         map.removeLayer(marker);
@@ -1665,6 +1709,7 @@ function renderBooking() {
                         type="date"
                         id="bookingDate"
                         min="${getToday()}"
+                        value="${getToday()}"
                     >
 
                 </label>
@@ -3324,6 +3369,20 @@ function calculateCost() {
             ).value
         );
 
+    // FIX / FEATURE: read the charging duration the user has available so
+    // we can compare the real stations against it (see
+    // renderStationComparison below), on top of the existing generic
+    // capacity/price estimate.
+    const durationField =
+        document.getElementById(
+            "chargeDuration"
+        );
+
+    const duration =
+        durationField
+            ? Number(durationField.value)
+            : NaN;
+
 
     if (
         capacity <= 0 ||
@@ -3376,6 +3435,104 @@ function calculateCost() {
             1,
             Math.round(time)
         ) + " min";
+
+
+    renderStationComparison(energy, duration);
+
+}
+
+
+/* =========================================================
+   STATION COST COMPARISON
+   ========================================================= */
+
+// FEATURE: ranks every real station by the actual cost (and time) to
+// deliver the energy the user needs, using each station's own price and
+// power — rather than the single manually-typed price above — so the
+// user can see which station is genuinely cheapest/fastest for their
+// available charging time.
+function renderStationComparison(energy, duration) {
+
+    const container =
+        document.getElementById(
+            "stationCompareResult"
+        );
+
+    if (!container) return;
+
+    const hasDuration =
+        Number.isFinite(duration) &&
+        duration > 0;
+
+    const ranked = stations
+
+        .filter(station => station.open)
+
+        .map(station => {
+
+            const timeNeeded =
+                (energy / station.power) *
+                60;
+
+            const fitsInTime =
+                !hasDuration ||
+                timeNeeded <= duration;
+
+            const cost =
+                energy * station.price;
+
+            return {
+                station,
+                timeNeeded,
+                fitsInTime,
+                cost
+            };
+
+        })
+
+        .sort(
+            (a, b) =>
+                a.cost - b.cost
+        )
+
+        .slice(0, 5);
+
+
+    if (!ranked.length) {
+
+        container.innerHTML =
+            `<p class="payment-note">No stations available to compare right now.</p>`;
+
+        return;
+
+    }
+
+
+    container.innerHTML = ranked.map(entry => `
+
+        <div class="compare-station-row">
+
+            <div>
+                <strong>${entry.station.name}</strong>
+                <span>${entry.station.power} kW · ₹${entry.station.price}/kWh</span>
+            </div>
+
+            <div class="compare-station-figures">
+
+                <span class="compare-cost">
+                    ₹${Math.round(entry.cost)}
+                </span>
+
+                <span class="compare-time ${entry.fitsInTime ? "" : "compare-time-warn"}">
+                    ${Math.max(1, Math.round(entry.timeNeeded))} min
+                    ${hasDuration && !entry.fitsInTime ? " · over your time" : ""}
+                </span>
+
+            </div>
+
+        </div>
+
+    `).join("");
 
 }
 
@@ -3623,6 +3780,13 @@ function setupEvents() {
         .addEventListener("click", () => {
             document.getElementById("savedPlacesPanel").classList.toggle("open");
         });
+
+    // FIX: the calculator icon (#calculatorBtn) had no click handler at all —
+    // openCalculator() existed but nothing ever called it, so the button did
+    // nothing when clicked.
+    document
+        .getElementById("calculatorBtn")
+        .addEventListener("click", openCalculator);
 
     document
         .getElementById("closeSavedPlaces")

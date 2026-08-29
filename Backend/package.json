@@ -1,23 +1,19 @@
 {
-  "name": "voltmap-backend",
+  "name": "voltmap-server",
   "version": "1.0.0",
-  "description": "Node.js backend for VoltMap EV Charging Locator and Booking Platform",
+  "private": true,
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "helmet": "^8.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
     "morgan": "^1.10.0",
-    "socket.io": "^4.8.1",
-    "uuid": "^11.0.5"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.9"
+    "socket.io": "^4.7.5",
+    "uuid": "^9.0.1"
   }
 }

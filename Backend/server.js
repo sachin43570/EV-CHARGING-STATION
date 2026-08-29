@@ -82,7 +82,10 @@ app.use(
 app.use(
     cors({
         origin: CLIENT_URL === "*" ? true : CLIENT_URL,
-        methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
+        // FIX: "PUT" was missing from this list. The frontend's saved-places
+        // feature calls PUT /api/users/:email/saved-places, so the CORS
+        // preflight for that request was being rejected by the browser.
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     })
 );
 
