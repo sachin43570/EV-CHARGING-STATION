@@ -1,0 +1,21 @@
+{
+  "name": "ev-charging-website",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sachin43570/EV-CHARGING-STATION.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sachin43570/EV-CHARGING-STATION/issues"
+  },
+  "homepage": "https://github.com/sachin43570/EV-CHARGING-STATION#readme"
+}

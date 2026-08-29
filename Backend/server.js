@@ -40,7 +40,7 @@ const server =
 
 
 const PORT =
-    process.env.PORT || 5500;
+    process.env.PORT || 5000;
 
 
 const CLIENT_URL =
@@ -4906,6 +4906,7 @@ app.use(
 
 server.listen(
     PORT,
+     "0.0.0.0",
     () => {
 
         console.log("");
