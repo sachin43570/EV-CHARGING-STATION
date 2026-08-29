@@ -67,7 +67,7 @@
     "powerKw": 22,
     "pricePerKwh": 12,
     "totalSlots": 10,
-    "availableSlots": 3,
+    "availableSlots": 2,
     "amenities": [
       "Shopping",
       "Cafe",
@@ -76,7 +76,7 @@
     "rating": 4.3,
     "reviews": 96,
     "open24x7": false,
-    "updatedAt": "2026-08-29T10:26:20.034Z"
+    "updatedAt": "2026-08-29T14:08:37.560Z"
   },
   {
     "id": "stn-004",

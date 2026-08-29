@@ -11,7 +11,7 @@
    CONFIGURATION
    ========================================================= */
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "https://ev-charging-station-0lbc.onrender.com";
 
 async function apiRequest(path, options = {}) {
 
