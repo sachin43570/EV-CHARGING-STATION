@@ -55,14 +55,6 @@ select {
     font: inherit;
 }
 
-/* FIX: the sort dropdown ("Recommended", "Nearest", "Cheapest", ...) and
-   every other <select> (connector filter, speed filter, vehicle picker,
-   auth role) style their closed box with var(--text), which is near-white
-   in dark mode. But the *opened* option list is drawn by the browser/OS,
-   not our CSS, and defaults to a light popup — so that near-white text
-   becomes invisible against it. color-scheme tells the browser which
-   palette to use for its own native controls so the popup text stays
-   readable in both themes. */
 select {
     color-scheme: dark;
 }
@@ -71,11 +63,6 @@ body.light select {
     color-scheme: light;
 }
 
-/* FIX (part 2): color-scheme alone still left the non-highlighted options
-   in the popup at a dim, low-contrast gray in Chromium browsers (Edge/
-   Chrome), only the hovered/selected row was readable. Chromium honors
-   background-color/color set directly on <option>, so pin them to the
-   same theme variables the rest of the UI uses. */
 select option {
     background-color: var(--panel);
     color: var(--text);
@@ -84,6 +71,8 @@ select option {
 .app {
     width: 100%;
     height: 100vh;
+    height: 100dvh; /* FIX: mobile browsers count the address bar inside 100vh, which
+                        clipped the bottom nav / drawer behind browser chrome on phones. */
 }
 
 
@@ -105,10 +94,6 @@ select option {
     z-index: 1000;
 }
 
-/* FIX: the topbar background was hardcoded dark and never switched with the
-   theme, while its text/icons (brand name, "Sachin", icon buttons) use
-   var(--text)/var(--muted), which turn dark in light mode too — making them
-   invisible against the still-dark bar. */
 body.light .topbar {
     background: rgba(255, 255, 255, 0.96);
 }
@@ -386,6 +371,7 @@ body.light .topbar {
 .main-layout {
     display: flex;
     height: calc(100vh - 72px);
+    height: calc(100dvh - 72px); /* FIX: dynamic-viewport fallback, see .app above */
 }
 
 
@@ -772,10 +758,6 @@ body.light .topbar {
 
 #map.light-map { background: #e8eef1; }
 
-/* FIX: OpenStreetMap's free raster tiles only ship a light style. Dark
-   mode is now simulated with a CSS filter over the tile layer instead of
-   depending on CARTO's dark_all endpoint, which now requires a paid/free
-   API key and was the source of the "API key required" watermark. */
 #map:not(.light-map) .leaflet-tile-pane {
     filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.9);
 }
@@ -852,9 +834,6 @@ body.light .topbar {
     color: var(--text);
 }
 
-/* FIX: same issue as the topbar — dark background stayed dark in light
-   mode while the icon color turned dark too, hiding the map controls
-   (location, fullscreen, saved places). */
 body.light .map-controls button {
     background: rgba(255, 255, 255, 0.92);
 }
@@ -909,8 +888,6 @@ body.light .saved-places-panel { background: rgba(255, 255, 255, 0.96); }
     color: var(--muted);
 }
 
-/* FIX: same dark-background/dark-text clash as above — the "Available /
-   Limited / Full" labels turned invisible in light mode. */
 body.light .map-legend {
     background: rgba(255, 255, 255, 0.92);
 }
@@ -958,8 +935,6 @@ body.light .map-legend {
     border-radius: 10px;
 }
 
-/* FIX: same dark-background/dark-text clash — the "chargers nearby" label
-   turned invisible in light mode. */
 body.light .map-summary {
     background: rgba(255, 255, 255, 0.92);
 }
@@ -1022,6 +997,7 @@ body.light .map-summary {
     width: 440px;
     max-width: 92vw;
     height: 100vh;
+    height: 100dvh;
 
     padding: 30px 25px;
 
@@ -1328,6 +1304,7 @@ body.light .map-summary {
     width: 500px;
     max-width: 100%;
     max-height: 90vh;
+    max-height: 90dvh;
 
     overflow-y: auto;
 
@@ -1756,6 +1733,9 @@ input[type="range"] {
 .order-card p { margin: 5px 0 0; color: var(--muted); font-size: 10px; }
 .order-status { color: var(--green); font-family: var(--font-mono); font-size: 8px; white-space: nowrap; }
 .order-meta { display: flex; gap: 14px; margin-top: 12px; color: var(--faint); font-size: 9px; }
+.order-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 13px; padding-top: 11px; border-top: 1px solid var(--border); color: var(--muted); font-size: 9px; }
+.paid { color: var(--green); }
+.rate-btn { padding: 0; border: 0; background: transparent; color: var(--yellow); font-size: 10px; }
 .rating-row { display: flex; align-items: center; justify-content: space-between; margin-top: 13px; padding-top: 11px; border-top: 1px solid var(--border); color: var(--muted); font-size: 9px; }
 .rating-stars { display: flex; gap: 3px; }
 .rating-stars button { padding: 0; border: 0; color: #ffbf43; background: transparent; font-size: 13px; }
@@ -1991,9 +1971,6 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
     font-size: 12px;
 }
 
-/* FEATURE: ranked list comparing the real cost/time to charge at every
-   station, using each station's own price and power, so the user can
-   pick the cheapest/fastest option for the charging time they have. */
 .calculator-compare-heading {
     margin: 22px 0 11px;
 
@@ -2212,8 +2189,12 @@ body.light {
         gap: 5px;
     }
 
-    .top-actions .icon-btn {
+    .top-actions .icon-btn:not(#calculatorBtn) {
         display: none;
+    }
+
+    .top-actions #calculatorBtn {
+        display: flex;
     }
 
     .profile-btn {
@@ -2222,6 +2203,7 @@ body.light {
 
     .main-layout {
         height: calc(100vh - 62px);
+        height: calc(100dvh - 62px); /* FIX: dynamic-viewport fallback, see .app above */
         display: block;
     }
 
@@ -2332,6 +2314,7 @@ body.light {
         max-width: 100%;
 
         height: 82vh;
+        height: 82dvh;
 
         border-left: 0;
         border-top: 1px solid var(--border);
@@ -2411,5 +2394,53 @@ body.light {
     .auth-card { padding: 22px; }
 
     .auth-links { gap: 14px; }
+
+}
+
+
+/* =========================================================
+   DEVICE-ADAPTIVE ENHANCEMENTS
+   ========================================================= */
+
+@media (hover: none) and (pointer: coarse) {
+
+    .icon-btn,
+    .map-controls button,
+    .favorite-btn,
+    .modal-close,
+    .drawer-close {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .book-btn,
+    .btn-primary,
+    .btn-secondary,
+    .quick-filter,
+    .option-btn {
+        min-height: 44px;
+    }
+
+    .station-card:hover {
+        transform: none;
+    }
+}
+
+.modal {
+    width: min(500px, 92vw);
+}
+
+@media (max-width: 380px) {
+
+    .compare-station-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .compare-station-figures {
+        align-items: flex-start;
+        text-align: left;
+    }
 
 }

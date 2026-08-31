@@ -121,7 +121,7 @@
     "powerKw": 240,
     "pricePerKwh": 24,
     "totalSlots": 12,
-    "availableSlots": 11,
+    "availableSlots": 12,
     "amenities": [
       "Cafe",
       "Lounge",
@@ -131,6 +131,6 @@
     "rating": 4.9,
     "reviews": 342,
     "open24x7": true,
-    "updatedAt": "2026-08-29T10:26:50.056Z"
+    "updatedAt": "2026-08-29T14:40:37.204Z"
   }
 ]
