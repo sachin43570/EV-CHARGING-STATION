@@ -28,4 +28,4 @@ coverage/
 # Runtime files
 *.pid
 *.seed
-*.pid.lock
+*.pid.lock.env
