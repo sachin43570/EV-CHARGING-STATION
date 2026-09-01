@@ -116,9 +116,15 @@
     <main class="main-layout">
 
 
-        <!-- ================= SIDEBAR ================= -->
+        <!-- ================= SIDEBAR / MOBILE BOTTOM SHEET ================= -->
 
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
+
+            <!-- FIX (bottom sheet feature): drag handle for the Google Maps–style
+                 mobile bottom sheet. Hidden on desktop; only shown under the
+                 existing max-width:800px mobile layout. Dragging/tapping this
+                 handle resizes #sidebar between peek / default / full states. -->
+            <div class="sheet-handle" id="sheetHandle" aria-hidden="true"></div>
 
             <div class="sidebar-header">
 
@@ -822,8 +828,8 @@
         </form>
 
         <div class="auth-links">
-            <button id="authModeToggle" type="button">Create an account</button>
-            <button id="forgotPasswordBtn" type="button">Forgot password?</button>
+    <button id="authModeToggle" type="button">Create an account</button>
+    <button id="forgotPasswordBtn" type="button" onclick="forgotPassword(); return false;">Forgot password?</button>
         </div>
 
     </div>

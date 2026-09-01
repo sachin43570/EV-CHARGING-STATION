@@ -15,7 +15,7 @@
     "powerKw": 120,
     "pricePerKwh": 18,
     "totalSlots": 6,
-    "availableSlots": 0,
+    "availableSlots": 3,
     "amenities": [
       "Cafe",
       "Wi-Fi",
@@ -25,7 +25,7 @@
     "rating": 4.7,
     "reviews": 184,
     "open24x7": true,
-    "updatedAt": "2026-09-01T12:53:27.282Z"
+    "updatedAt": "2026-09-01T21:41:31.418Z"
   },
   {
     "id": "stn-002",
@@ -42,7 +42,7 @@
     "powerKw": 180,
     "pricePerKwh": 21,
     "totalSlots": 8,
-    "availableSlots": 8,
+    "availableSlots": 6,
     "amenities": [
       "Cafe",
       "Parking"
@@ -50,7 +50,7 @@
     "rating": 4.5,
     "reviews": 121,
     "open24x7": true,
-    "updatedAt": "2026-09-01T12:47:57.145Z"
+    "updatedAt": "2026-09-01T21:41:16.410Z"
   },
   {
     "id": "stn-003",
@@ -67,7 +67,7 @@
     "powerKw": 22,
     "pricePerKwh": 12,
     "totalSlots": 10,
-    "availableSlots": 6,
+    "availableSlots": 0,
     "amenities": [
       "Shopping",
       "Cafe",
@@ -76,7 +76,7 @@
     "rating": 4.3,
     "reviews": 96,
     "open24x7": false,
-    "updatedAt": "2026-09-01T13:07:09.455Z"
+    "updatedAt": "2026-09-01T21:39:16.369Z"
   },
   {
     "id": "stn-004",
@@ -94,7 +94,7 @@
     "powerKw": 150,
     "pricePerKwh": 19.5,
     "totalSlots": 5,
-    "availableSlots": 5,
+    "availableSlots": 0,
     "amenities": [
       "Wi-Fi",
       "Cafe",
@@ -103,7 +103,7 @@
     "rating": 4.6,
     "reviews": 208,
     "open24x7": true,
-    "updatedAt": "2026-09-01T12:52:42.260Z"
+    "updatedAt": "2026-09-01T21:39:31.369Z"
   },
   {
     "id": "stn-005",
@@ -121,7 +121,7 @@
     "powerKw": 240,
     "pricePerKwh": 24,
     "totalSlots": 12,
-    "availableSlots": 6,
+    "availableSlots": 5,
     "amenities": [
       "Cafe",
       "Lounge",
@@ -131,6 +131,6 @@
     "rating": 4.9,
     "reviews": 342,
     "open24x7": true,
-    "updatedAt": "2026-09-01T12:54:57.322Z"
+    "updatedAt": "2026-09-01T21:42:01.422Z"
   }
 ]

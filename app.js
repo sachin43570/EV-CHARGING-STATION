@@ -843,7 +843,7 @@ function ensurePaymentModal() {
 
     modal = document.createElement("div");
     modal.id = "paymentModal";
-    modal.className = "modal-overlay";
+    modal.className = "modal-overlay"; modal.style.zIndex = "100000";
 
     modal.innerHTML = `
         <div class="modal payment-modal" style="position:relative;">
@@ -2288,7 +2288,7 @@ function initializeAuth() {
 
     document.getElementById("authForm").addEventListener("submit", submitAuth);
     document.getElementById("authModeToggle").addEventListener("click", toggleAuthMode);
-    document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
+    document.getElementById("forgotPasswordBtn")?.addEventListener("click", event => { event.preventDefault(); forgotPassword(); });
 
     // FIX: mount + initialize "Sign in with Google" inside the auth card.
     initializeGoogleSignIn();
@@ -2435,21 +2435,23 @@ function ensureResetPasswordModal() {
     let modal = document.getElementById("resetPasswordModal");
     if (modal) return modal;
 
-    modal = document.createElement("div");
-    modal.id = "resetPasswordModal";
-    modal.className = "modal-overlay";
+   modal = document.createElement("div");
+modal.id = "resetPasswordModal";
+modal.className = "modal-overlay open";
+modal.style.zIndex = "999999";
 
-    modal.innerHTML = `
-        <div class="modal" style="position:relative;">
-            <button class="modal-close" id="resetPasswordCloseBtn" type="button"
-                style="position:absolute;top:17px;right:17px;">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-            <div id="resetPasswordContent"></div>
-        </div>
-    `;
+modal.innerHTML = `
+    <div class="modal" style="position:relative;">
+        <button class="modal-close" id="resetPasswordCloseBtn" type="button"
+            style="position:absolute;top:17px;right:17px;">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div id="resetPasswordContent"></div>
+    </div>
+`;
 
-    document.body.appendChild(modal);
+document.body.appendChild(modal);
+modal.style.display = "flex";
 
     modal.addEventListener("click", event => {
         if (event.target === modal) modal.classList.remove("open");

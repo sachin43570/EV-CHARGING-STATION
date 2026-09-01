@@ -2240,6 +2240,53 @@ body.light {
         z-index: 800;
 
         box-shadow: var(--shadow);
+
+        /* FIX (bottom sheet feature): the sheet used to only ever have the
+           one fixed CSS height above. Now JS (initBottomSheet) takes over
+           and animates this height between "peek / default / full" snap
+           points to give it the Google Maps drag behaviour. The transition
+           here is what makes the JS-driven height changes glide instead of
+           jumping, and .sidebar.dragging (below) turns it off mid-drag so
+           the sheet tracks the finger/pointer with no lag. */
+        transition: height 0.28s cubic-bezier(0.22, 0.9, 0.32, 1);
+        will-change: height;
+    }
+
+    .sidebar.dragging {
+        transition: none;
+    }
+
+    .sheet-handle {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+
+        height: 22px;
+
+        cursor: grab;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    .sheet-handle::before {
+        content: "";
+
+        width: 38px;
+        height: 4px;
+
+        border-radius: 3px;
+
+        background: var(--border-light);
+    }
+
+    .sheet-handle:active {
+        cursor: grabbing;
+    }
+
+    .sheet-handle:active::before {
+        background: var(--green);
     }
 
     .sidebar-header {
@@ -2256,6 +2303,7 @@ body.light {
 
     .station-list {
         padding: 8px;
+        touch-action: pan-y;
     }
 
     .station-card {
@@ -2466,4 +2514,18 @@ body.light {
         text-align: left;
     }
 
+}
+
+
+/* =========================================================
+   MOBILE BOTTOM SHEET — desktop no-op
+   Kept outside the max-width:800px block on purpose: on desktop the
+   handle must stay hidden and the sidebar must keep behaving exactly
+   like before (fixed width column, no drag). All the interactive
+   sheet styling lives inside the existing @media (max-width: 800px)
+   block above so it only ever applies to the mobile layout.
+   ========================================================= */
+
+.sheet-handle {
+    display: none;
 }

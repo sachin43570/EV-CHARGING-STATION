@@ -34,5 +34,14 @@
       "rating": null,
       "createdAt": "2026-08-25T18:49:49.127Z"
     }
+  ],
+  "resetCodes": [
+    {
+      "email": "sachinmaurya43570@gmail.com",
+      "code": "600479",
+      "verified": false,
+      "expiresAt": 1788299073626,
+      "createdAt": "2026-09-01T21:34:33.626Z"
+    }
   ]
 }
