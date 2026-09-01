@@ -5,6 +5,26 @@
 
 const API_BASE = "https://ev-charging-station-0lbc.onrender.com";
 
+/* =========================================================
+   FIXED ADMIN ACCOUNT
+   Only this single email/password combination may ever sign
+   in as admin, and no new admin accounts can be created from
+   the sign-up form. Change these two values to your own —
+   for a real deployment, move this check to the backend
+   instead of trusting it purely on the frontend.
+   ========================================================= */
+const ADMIN_CREDENTIALS = {
+    email: "sachinmaurya43570@gmail.com",
+    password: "Sachin@9580"
+};
+
+/* =========================================================
+   GOOGLE SIGN-IN
+   Replace with your OAuth 2.0 Client ID from
+   https://console.cloud.google.com/apis/credentials
+   ========================================================= */
+const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com";
+
 async function apiRequest(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
         headers: { "Content-Type": "application/json", ...(options.headers || {}) },
@@ -2107,6 +2127,152 @@ function setupEvents() {
    AUTHENTICATION
    ========================================================= */
 
+/* =========================================================
+   GOOGLE SIGN-IN
+   Loads Google Identity Services on demand and mounts a
+   "Sign in with Google" button into the auth card. Requires
+   a real GOOGLE_CLIENT_ID (see top of file) with this site's
+   origin added under "Authorized JavaScript origins" in the
+   Google Cloud Console.
+
+   On success this calls POST /auth/google { credential } on
+   your backend so the ID token can be verified server-side —
+   add that route to your API. If it isn't available yet, this
+   falls back to a local demo account keyed by the Google
+   email so the button is still testable end to end.
+   ========================================================= */
+
+function loadGoogleScript() {
+    return new Promise((resolve, reject) => {
+        if (window.google?.accounts?.id) {
+            resolve(window.google);
+            return;
+        }
+
+        const existing = document.querySelector('script[data-google-sdk="true"]');
+
+        if (existing) {
+            existing.addEventListener("load", () => resolve(window.google));
+            existing.addEventListener("error", reject);
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.dataset.googleSdk = "true";
+        script.onload = () => resolve(window.google);
+        script.onerror = () => reject(new Error("Google Sign-In could not be loaded."));
+
+        document.head.appendChild(script);
+    });
+}
+
+function ensureGoogleSignInMount() {
+    if (document.getElementById("googleSignInMount")) return;
+
+    const authForm = document.getElementById("authForm");
+    if (!authForm) return;
+
+    authForm.insertAdjacentHTML("afterend", `
+        <div style="display:flex;align-items:center;gap:10px;margin:18px 0 12px;color:var(--faint);font-size:9px;letter-spacing:.08em;">
+            <span style="flex:1;height:1px;background:var(--border);"></span>
+            OR CONTINUE WITH
+            <span style="flex:1;height:1px;background:var(--border);"></span>
+        </div>
+        <div id="googleSignInMount" style="display:flex;justify-content:center;"></div>
+    `);
+}
+
+async function initializeGoogleSignIn() {
+    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith("YOUR_GOOGLE_OAUTH_CLIENT_ID")) {
+        console.warn("Google Sign-In: set GOOGLE_CLIENT_ID at the top of script.js to enable it.");
+        return;
+    }
+
+    ensureGoogleSignInMount();
+
+    try {
+        const google = await loadGoogleScript();
+
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleCredential
+        });
+
+        const mount = document.getElementById("googleSignInMount");
+
+        if (mount) {
+            google.accounts.id.renderButton(mount, {
+                theme: "filled_black",
+                size: "large",
+                shape: "pill",
+                width: 320,
+                text: "continue_with"
+            });
+        }
+    } catch (error) {
+        console.warn("Google Sign-In unavailable:", error);
+    }
+}
+
+function decodeGoogleCredential(token) {
+    try {
+        const payloadBase64 = token.split(".")[1];
+        const normalized = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
+        return JSON.parse(decodeURIComponent(escape(atob(normalized))));
+    } catch {
+        return null;
+    }
+}
+
+async function handleGoogleCredential(response) {
+    if (!response?.credential) return;
+
+    const payload = decodeGoogleCredential(response.credential);
+
+    if (!payload?.email) {
+        showToast("Google sign-in failed", "Could not read your Google account details.");
+        return;
+    }
+
+    let account;
+
+    try {
+        const result = await apiRequest("/auth/google", {
+            method: "POST",
+            body: JSON.stringify({ credential: response.credential })
+        });
+        account = result.data;
+
+    } catch (backendError) {
+        // Demo/offline fallback — create or reuse a local driver account tied to the Google email.
+        const accounts = JSON.parse(localStorage.getItem("voltmap-accounts") || "[]");
+        account = accounts.find(item => item.email === payload.email && item.role === "user");
+
+        if (!account) {
+            account = {
+                name: payload.name || payload.email.split("@")[0],
+                email: payload.email,
+                role: "user",
+                password: null,
+                provider: "google"
+            };
+            accounts.push(account);
+            localStorage.setItem("voltmap-accounts", JSON.stringify(accounts));
+        }
+    }
+
+    currentUser = { name: account.name, email: account.email, role: account.role || "user" };
+    localStorage.setItem("voltmap-session", JSON.stringify(currentUser));
+
+    applyCurrentUser();
+    document.getElementById("authOverlay").classList.add("hidden");
+
+    showToast("Welcome to VoltMap", `Signed in as ${currentUser.name} via Google.`);
+}
+
 function initializeAuth() {
     const savedSession = localStorage.getItem("voltmap-session");
 
@@ -2123,6 +2289,9 @@ function initializeAuth() {
     document.getElementById("authForm").addEventListener("submit", submitAuth);
     document.getElementById("authModeToggle").addEventListener("click", toggleAuthMode);
     document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
+
+    // FIX: mount + initialize "Sign in with Google" inside the auth card.
+    initializeGoogleSignIn();
 }
 
 function toggleAuthMode() {
@@ -2163,6 +2332,31 @@ async function submitAuth(event) {
 
     if (!email || !email.includes("@") || password.length < 6 || (signUp && !name)) {
         error.textContent = "Enter a valid email, a password of at least 6 characters, and every required field.";
+        return;
+    }
+
+    // FIX: single fixed admin account — no new admin accounts can ever be
+    // created, and admin sign-in only succeeds against the hardcoded
+    // ADMIN_CREDENTIALS above. Driver ("user") accounts are unaffected
+    // and keep using the backend/localStorage flow below as before.
+    if (role === "admin") {
+        if (signUp) {
+            error.textContent = "Admin sign-up is disabled. VoltMap has a single fixed admin account — please sign in instead.";
+            return;
+        }
+
+        if (email !== ADMIN_CREDENTIALS.email.toLowerCase() || password !== ADMIN_CREDENTIALS.password) {
+            error.textContent = "Invalid admin credentials.";
+            return;
+        }
+
+        currentUser = { name: "VoltMap Admin", email: ADMIN_CREDENTIALS.email, role: "admin" };
+        localStorage.setItem("voltmap-session", JSON.stringify(currentUser));
+
+        applyCurrentUser();
+        document.getElementById("authOverlay").classList.add("hidden");
+
+        showToast("Welcome to VoltMap", "Signed in as admin.");
         return;
     }
 
@@ -2213,16 +2407,264 @@ async function submitAuth(event) {
     showToast("Welcome to VoltMap", `Signed in as ${currentUser.role}.`);
 }
 
-function forgotPassword() {
-    const email = document.getElementById("authEmail").value.trim();
+/* =========================================================
+   FORGOT PASSWORD — EMAIL CODE RESET
+   Expects three backend routes (add them to your API if they
+   don't exist yet):
+     POST /auth/forgot-password    { email }                -> emails a code
+     POST /auth/verify-reset-code  { email, code }           -> validates it
+     POST /auth/reset-password     { email, newPassword }    -> sets new password
+   If the backend/those routes aren't available, this falls
+   back to a local demo mode (code is generated in the browser
+   and shown in a toast/console) so the flow still works end to
+   end for testing.
+   ========================================================= */
 
-    if (email) {
-        syncToBackend("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+let resetPasswordDraft = { email: "", codeVerified: false };
+
+function forgotPassword() {
+    const prefillEmail = document.getElementById("authEmail").value.trim();
+    resetPasswordDraft = { email: prefillEmail, codeVerified: false };
+
+    ensureResetPasswordModal();
+    renderResetPasswordStep("email");
+    document.getElementById("resetPasswordModal").classList.add("open");
+}
+
+function ensureResetPasswordModal() {
+    let modal = document.getElementById("resetPasswordModal");
+    if (modal) return modal;
+
+    modal = document.createElement("div");
+    modal.id = "resetPasswordModal";
+    modal.className = "modal-overlay";
+
+    modal.innerHTML = `
+        <div class="modal" style="position:relative;">
+            <button class="modal-close" id="resetPasswordCloseBtn" type="button"
+                style="position:absolute;top:17px;right:17px;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="resetPasswordContent"></div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener("click", event => {
+        if (event.target === modal) modal.classList.remove("open");
+    });
+
+    document.getElementById("resetPasswordCloseBtn")?.addEventListener("click", () => {
+        modal.classList.remove("open");
+    });
+
+    return modal;
+}
+
+function renderResetPasswordStep(step) {
+    const modal = ensureResetPasswordModal();
+    const content = modal.querySelector("#resetPasswordContent");
+    if (!content) return;
+
+    if (step === "email") {
+        content.innerHTML = `
+            <span class="modal-eyebrow">RESET PASSWORD</span>
+            <h2 style="font-family:var(--font-display);margin:6px 0 18px;">Forgot your password?</h2>
+            <p class="booking-subtitle" style="margin-top:-8px;">Enter your account email and we'll send a verification code to it.</p>
+            <label class="auth-label">Email address
+                <input type="email" id="resetEmailInput" placeholder="you@example.com" value="${escapeAttribute(resetPasswordDraft.email)}">
+            </label>
+            <p class="auth-error" id="resetPasswordError"></p>
+            <button type="button" class="btn-primary full-btn" id="sendResetCodeBtn" style="margin-top:6px;">
+                <i class="fa-regular fa-paper-plane"></i> Send reset code
+            </button>
+        `;
+
+        content.querySelector("#sendResetCodeBtn").addEventListener("click", () => {
+            const email = content.querySelector("#resetEmailInput").value.trim().toLowerCase();
+            const errorEl = content.querySelector("#resetPasswordError");
+
+            if (!email || !email.includes("@")) {
+                errorEl.textContent = "Enter a valid email address.";
+                return;
+            }
+
+            errorEl.textContent = "";
+            sendResetCode(email);
+        });
+
+    } else if (step === "code") {
+        content.innerHTML = `
+            <span class="modal-eyebrow">RESET PASSWORD</span>
+            <h2 style="font-family:var(--font-display);margin:6px 0 18px;">Enter verification code</h2>
+            <p class="booking-subtitle" style="margin-top:-8px;">
+                We sent a 6-digit code to <strong style="color:var(--text)">${escapeHtmlSafe(resetPasswordDraft.email)}</strong>.
+            </p>
+            <label class="auth-label">Verification code
+                <input type="text" id="resetCodeInput" inputmode="numeric" maxlength="6" placeholder="123456">
+            </label>
+            <p class="auth-error" id="resetPasswordError"></p>
+            <button type="button" class="btn-primary full-btn" id="verifyResetCodeBtn">
+                <i class="fa-solid fa-shield-halved"></i> Verify code
+            </button>
+            <div class="auth-links" style="margin-top:14px;">
+                <button type="button" id="resendResetCodeBtn">Resend code</button>
+                <button type="button" id="changeResetEmailBtn">Use a different email</button>
+            </div>
+        `;
+
+        content.querySelector("#verifyResetCodeBtn").addEventListener("click", () => {
+            const code = content.querySelector("#resetCodeInput").value.trim();
+            const errorEl = content.querySelector("#resetPasswordError");
+
+            if (!code) {
+                errorEl.textContent = "Enter the code we sent you.";
+                return;
+            }
+
+            errorEl.textContent = "";
+            verifyResetCode(code);
+        });
+
+        content.querySelector("#resendResetCodeBtn").addEventListener("click", () => sendResetCode(resetPasswordDraft.email));
+        content.querySelector("#changeResetEmailBtn").addEventListener("click", () => renderResetPasswordStep("email"));
+
+    } else if (step === "newPassword") {
+        content.innerHTML = `
+            <span class="modal-eyebrow">RESET PASSWORD</span>
+            <h2 style="font-family:var(--font-display);margin:6px 0 18px;">Set a new password</h2>
+            <label class="auth-label">New password
+                <input type="password" id="newPasswordInput" placeholder="At least 6 characters" autocomplete="new-password">
+            </label>
+            <label class="auth-label">Confirm new password
+                <input type="password" id="confirmPasswordInput" placeholder="Re-enter password" autocomplete="new-password">
+            </label>
+            <p class="auth-error" id="resetPasswordError"></p>
+            <button type="button" class="btn-primary full-btn" id="submitNewPasswordBtn" style="margin-top:6px;">
+                <i class="fa-solid fa-lock"></i> Reset password
+            </button>
+        `;
+
+        content.querySelector("#submitNewPasswordBtn").addEventListener("click", () => {
+            const newPassword = content.querySelector("#newPasswordInput").value;
+            const confirmPassword = content.querySelector("#confirmPasswordInput").value;
+            submitNewPassword(newPassword, confirmPassword);
+        });
+
+    } else if (step === "done") {
+        content.innerHTML = `
+            <div style="text-align:center;">
+                <div style="width:64px;height:64px;margin:8px auto 16px;display:grid;place-items:center;
+                    border-radius:50%;background:var(--green-soft);color:var(--green);font-size:26px;">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <span class="modal-eyebrow">PASSWORD UPDATED</span>
+                <h2 style="font-family:var(--font-display);margin:8px 0;">You're all set</h2>
+                <p style="color:var(--muted);font-size:11px;line-height:1.7;">
+                    Your password has been reset. You can now sign in with your new password.
+                </p>
+                <button type="button" class="btn-primary full-btn" id="resetDoneBtn" style="margin-top:16px;">Back to sign in</button>
+            </div>
+        `;
+
+        content.querySelector("#resetDoneBtn").addEventListener("click", () => {
+            document.getElementById("resetPasswordModal").classList.remove("open");
+            const emailField = document.getElementById("authEmail");
+            if (emailField) emailField.value = resetPasswordDraft.email;
+        });
+    }
+}
+
+async function sendResetCode(email) {
+    resetPasswordDraft.email = email;
+    resetPasswordDraft.codeVerified = false;
+
+    try {
+        await apiRequest("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+        showToast("Code sent", `A verification code was sent to ${email}.`);
+    } catch (backendError) {
+        // Demo/offline fallback so the flow can still be tested without a live email backend.
+        const demoCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const pending = JSON.parse(localStorage.getItem("voltmap-reset-codes") || "{}");
+        pending[email] = { code: demoCode, expires: Date.now() + 10 * 60 * 1000 };
+        localStorage.setItem("voltmap-reset-codes", JSON.stringify(pending));
+
+        console.warn("Email service unavailable — demo reset code:", demoCode);
+        showToast("Demo mode (no backend)", `Email service unavailable. Demo code: ${demoCode}`);
     }
 
-    document.getElementById("authError").textContent = email
-        ? "Password-reset request recorded. Connect an email provider to send the reset link."
-        : "Enter your email address first to reset your password.";
+    renderResetPasswordStep("code");
+}
+
+async function verifyResetCode(code) {
+    try {
+        await apiRequest("/auth/verify-reset-code", {
+            method: "POST",
+            body: JSON.stringify({ email: resetPasswordDraft.email, code })
+        });
+
+        resetPasswordDraft.codeVerified = true;
+        renderResetPasswordStep("newPassword");
+        return;
+
+    } catch (backendError) {
+        // Demo/offline fallback — verify against the locally generated code.
+        const pending = JSON.parse(localStorage.getItem("voltmap-reset-codes") || "{}");
+        const entry = pending[resetPasswordDraft.email];
+
+        if (entry && entry.code === code && Date.now() < entry.expires) {
+            resetPasswordDraft.codeVerified = true;
+            renderResetPasswordStep("newPassword");
+        } else {
+            const modal = document.getElementById("resetPasswordModal");
+            const errorEl = modal?.querySelector("#resetPasswordError");
+            if (errorEl) errorEl.textContent = "That code is incorrect or has expired.";
+        }
+    }
+}
+
+async function submitNewPassword(newPassword, confirmPassword) {
+    const modal = document.getElementById("resetPasswordModal");
+    const errorEl = modal?.querySelector("#resetPasswordError");
+
+    if (!resetPasswordDraft.codeVerified) {
+        if (errorEl) errorEl.textContent = "Please verify your reset code first.";
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        if (errorEl) errorEl.textContent = "Password must be at least 6 characters.";
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        if (errorEl) errorEl.textContent = "Passwords don't match.";
+        return;
+    }
+
+    try {
+        await apiRequest("/auth/reset-password", {
+            method: "POST",
+            body: JSON.stringify({ email: resetPasswordDraft.email, newPassword })
+        });
+    } catch (backendError) {
+        // Demo/offline fallback — update the locally stored offline account, if any.
+        const accounts = JSON.parse(localStorage.getItem("voltmap-accounts") || "[]");
+        const account = accounts.find(item => item.email === resetPasswordDraft.email);
+
+        if (account) {
+            account.password = newPassword;
+            localStorage.setItem("voltmap-accounts", JSON.stringify(accounts));
+        }
+    }
+
+    const pending = JSON.parse(localStorage.getItem("voltmap-reset-codes") || "{}");
+    delete pending[resetPasswordDraft.email];
+    localStorage.setItem("voltmap-reset-codes", JSON.stringify(pending));
+
+    renderResetPasswordStep("done");
+    showToast("Password updated", "You can now sign in with your new password.");
 }
 
 function applyCurrentUser() {
