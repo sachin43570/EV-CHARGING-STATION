@@ -150,6 +150,159 @@ document.addEventListener("DOMContentLoaded", () => {
     catch (authError) { console.error("Auth failed to initialize:", authError); }
 
     simulateLiveUpdates();
+
+    /* =========================================================
+   GOOGLE-MAPS-STYLE BOTTOM SHEET
+   ---------------------------------------------------------
+   Drop this into app.js and call initBottomSheet() once,
+   after the DOM is ready (e.g. inside your existing
+   DOMContentLoaded / init() function).
+
+   It matches the markup/CSS already in index.html + style.css:
+     - #sidebar        the sheet itself (.sidebar, mobile only)
+     - #sheetHandle     the drag handle (.sheet-handle)
+     - #stationList     the scrollable list inside the sheet
+
+   Behaviour:
+     - Drag the handle up/down to resize the sheet.
+     - Snaps to one of three heights on release: peek, default, full.
+     - A fast flick (high velocity) snaps in the flick direction
+       even if the sheet hasn't crossed the midpoint yet.
+     - While the sheet is not "full", dragging the handle takes
+       priority over the list's own scrolling; once "full", the
+       handle still works, and the list scrolls normally.
+   ========================================================= */
+
+function initBottomSheet() {
+    const sheet = document.getElementById("sidebar");
+    const handle = document.getElementById("sheetHandle");
+
+    if (!sheet || !handle) return;
+
+    // Snap points, as a fraction of the viewport height.
+    // Tweak these to taste — they mirror the sheet's default
+    // mobile heights already set in the CSS (37vh / 40vh).
+    const SNAP_POINTS = {
+        peek: 0.14,
+        default: 0.4,
+        full: 0.88
+    };
+
+    let currentSnap = "default";
+    let startY = 0;
+    let startHeight = 0;
+    let dragging = false;
+
+    function vh(fraction) {
+        return window.innerHeight * fraction;
+    }
+
+    function setHeight(px) {
+        sheet.style.height = `${px}px`;
+    }
+
+    function applySnap(name) {
+        currentSnap = name;
+        sheet.classList.remove("dragging");
+        setHeight(vh(SNAP_POINTS[name]));
+    }
+
+    function nearestSnap(px, velocity) {
+        // A fast flick wins outright, in the direction of the flick.
+        const FLICK_VELOCITY = 0.6; // px/ms
+        if (Math.abs(velocity) > FLICK_VELOCITY) {
+            return velocity < 0 ? "full" : "peek";
+        }
+
+        const entries = Object.entries(SNAP_POINTS).map(([name, frac]) => [name, vh(frac)]);
+        entries.sort((a, b) => Math.abs(px - a[1]) - Math.abs(px - b[1]));
+        return entries[0][0];
+    }
+
+    function clamp(px) {
+        return Math.min(vh(SNAP_POINTS.full), Math.max(vh(SNAP_POINTS.peek), px));
+    }
+
+    function onPointerDown(e) {
+        // Only take over the drag from the handle itself, so the
+        // station list underneath keeps its own normal scrolling.
+        dragging = true;
+        startY = e.touches ? e.touches[0].clientY : e.clientY;
+        startHeight = sheet.getBoundingClientRect().height;
+        sheet.classList.add("dragging");
+        document.body.style.userSelect = "none";
+    }
+
+    let lastY = 0;
+    let lastT = 0;
+    let velocity = 0;
+
+    function onPointerMove(e) {
+        if (!dragging) return;
+
+        const y = e.touches ? e.touches[0].clientY : e.clientY;
+        const now = performance.now();
+
+        if (lastT) {
+            const dt = now - lastT || 1;
+            velocity = (y - lastY) / dt; // px/ms, positive = moving down
+        }
+        lastY = y;
+        lastT = now;
+
+        const delta = startY - y; // dragging up increases height
+        setHeight(clamp(startHeight + delta));
+
+        e.preventDefault();
+    }
+
+    function onPointerUp() {
+        if (!dragging) return;
+        dragging = false;
+
+        document.body.style.userSelect = "";
+
+        const finalHeight = sheet.getBoundingClientRect().height;
+        applySnap(nearestSnap(finalHeight, velocity));
+
+        velocity = 0;
+        lastT = 0;
+    }
+
+    handle.addEventListener("touchstart", onPointerDown, { passive: true });
+    handle.addEventListener("touchmove", onPointerMove, { passive: false });
+    handle.addEventListener("touchend", onPointerUp);
+
+    handle.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+
+    // Tapping the handle (no real drag) toggles between default and full,
+    // which is the behaviour people expect from the Google Maps handle.
+    let tapStartTime = 0;
+    handle.addEventListener("touchstart", () => (tapStartTime = Date.now()), { passive: true });
+    handle.addEventListener("touchend", () => {
+        if (Date.now() - tapStartTime < 200 && Math.abs(velocity) < 0.05) {
+            applySnap(currentSnap === "full" ? "default" : "full");
+        }
+    });
+
+    // Re-clamp on resize/orientation change so the sheet never ends up
+    // taller than the viewport allows.
+    window.addEventListener("resize", () => applySnap(currentSnap));
+
+    // Start at the default snap point.
+    applySnap("default");
+}
+
+/* Call this once your DOM is ready — for example, near the rest of
+   your init calls:
+
+   document.addEventListener("DOMContentLoaded", () => {
+       ...
+       initBottomSheet();
+   });
+*/
 });
 
 /* =========================================================

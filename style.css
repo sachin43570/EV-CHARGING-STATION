@@ -7,26 +7,20 @@
     --panel: #0d131a;
     --card: #121a23;
     --card-hover: #17222d;
-
     --border: #202c38;
     --border-light: #2b3947;
-
     --text: #f1f5f7;
     --muted: #8b9aa7;
     --faint: #5d6b78;
-
     --green: #00e5a0;
     --green-dark: #00b77e;
     --green-soft: rgba(0, 229, 160, 0.11);
-
     --yellow: #ffb020;
     --red: #ff5c5c;
     --blue: #5b9cff;
-
     --font-display: "Space Grotesk", sans-serif;
     --font-body: "Inter", sans-serif;
     --font-mono: "JetBrains Mono", monospace;
-
     --radius: 14px;
     --shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
 }
@@ -75,7 +69,6 @@ select option {
                         clipped the bottom nav / drawer behind browser chrome on phones. */
 }
 
-
 /* =========================================================
    TOPBAR
    ========================================================= */
@@ -86,10 +79,8 @@ select option {
     align-items: center;
     gap: 30px;
     padding: 0 24px;
-
     background: rgba(13, 19, 26, 0.96);
     border-bottom: 1px solid var(--border);
-
     position: relative;
     z-index: 1000;
 }
@@ -108,15 +99,11 @@ body.light .topbar {
 .brand-icon {
     width: 38px;
     height: 38px;
-
     display: grid;
     place-items: center;
-
     border-radius: 10px;
-
     background: var(--green-soft);
     color: var(--green);
-
     box-shadow: 0 0 25px rgba(0, 229, 160, 0.12);
 }
 
@@ -144,17 +131,13 @@ body.light .topbar {
     flex: 1;
     max-width: 600px;
     height: 42px;
-
     display: flex;
     align-items: center;
     gap: 11px;
-
     padding: 0 14px;
-
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 10px;
-
     transition: 0.2s;
 }
 
@@ -229,13 +212,10 @@ body.light .topbar {
 
 .location-btn {
     height: 38px;
-
     display: flex;
     align-items: center;
     gap: 7px;
-
     padding: 0 12px;
-
     color: var(--text);
     background: var(--card);
     border: 1px solid var(--border);
@@ -250,7 +230,6 @@ body.light .topbar {
     display: flex;
     align-items: center;
     gap: 7px;
-
     font-family: var(--font-mono);
     font-size: 10px;
     color: var(--green);
@@ -259,12 +238,9 @@ body.light .topbar {
 .live-dot {
     width: 7px;
     height: 7px;
-
     border-radius: 50%;
     background: var(--green);
-
     box-shadow: 0 0 0 5px rgba(0, 229, 160, 0.08);
-
     animation: pulse 1.7s infinite;
 }
 
@@ -272,11 +248,9 @@ body.light .topbar {
     0% {
         box-shadow: 0 0 0 0 rgba(0, 229, 160, 0.4);
     }
-
     70% {
         box-shadow: 0 0 0 8px rgba(0, 229, 160, 0);
     }
-
     100% {
         box-shadow: 0 0 0 0 rgba(0, 229, 160, 0);
     }
@@ -284,10 +258,8 @@ body.light .topbar {
 
 .icon-btn {
     position: relative;
-
     width: 38px;
     height: 38px;
-
     display: flex;              /* FIX: icon-btn had no centering rule, so its <i> icon
                                     (calculator, notification, theme) fell back to default
                                     inline/button alignment instead of sitting in the
@@ -296,12 +268,9 @@ body.light .topbar {
                                     topbar there, so any drift stands out. */
     align-items: center;
     justify-content: center;
-
     border-radius: 9px;
-
     border: 1px solid var(--border);
     background: var(--card);
-
     color: var(--muted);
 }
 
@@ -312,21 +281,15 @@ body.light .topbar {
 
 .notification-count {
     position: absolute;
-
     top: -4px;
     right: -4px;
-
     width: 16px;
     height: 16px;
-
     display: grid;
     place-items: center;
-
     background: var(--green);
     color: #04100b;
-
     border-radius: 50%;
-
     font-size: 9px;
     font-weight: 700;
 }
@@ -335,7 +298,6 @@ body.light .topbar {
     display: flex;
     align-items: center;
     gap: 8px;
-
     border: 0;
     background: none;
     color: var(--text);
@@ -344,14 +306,10 @@ body.light .topbar {
 .avatar {
     width: 34px;
     height: 34px;
-
     display: grid;
     place-items: center;
-
     border-radius: 50%;
-
     background: linear-gradient(135deg, #16c79a, #1b78ff);
-
     color: white;
     font-size: 11px;
     font-weight: 700;
@@ -372,7 +330,6 @@ body.light .topbar {
 
 .orders-btn:hover { border-color: var(--green); color: var(--green); }
 
-
 /* =========================================================
    MAIN LAYOUT
    ========================================================= */
@@ -383,7 +340,6 @@ body.light .topbar {
     height: calc(100dvh - 72px); /* FIX: dynamic-viewport fallback, see .app above */
 }
 
-
 /* =========================================================
    SIDEBAR
    ========================================================= */
@@ -391,37 +347,29 @@ body.light .topbar {
 .sidebar {
     width: 390px;
     min-width: 390px;
-
     background: var(--panel);
-
     border-right: 1px solid var(--border);
-
     display: flex;
     flex-direction: column;
-
     z-index: 20;
 }
 
 .sidebar-header {
     padding: 20px;
-
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-
     border-bottom: 1px solid var(--border);
 }
 
 .sidebar-header h1 {
     margin: 0;
-
     font-family: var(--font-display);
     font-size: 19px;
 }
 
 .sidebar-header p {
     margin: 5px 0 0;
-
     color: var(--muted);
     font-size: 11px;
 }
@@ -435,15 +383,11 @@ body.light .topbar {
     display: flex;
     align-items: center;
     gap: 7px;
-
     padding: 8px 11px;
-
     color: var(--text);
     background: var(--card);
-
     border: 1px solid var(--border);
     border-radius: 8px;
-
     font-size: 11px;
 }
 
@@ -454,30 +398,21 @@ body.light .topbar {
 .quick-filters {
     display: flex;
     gap: 7px;
-
     padding: 13px 16px;
-
     overflow-x: auto;
-
     border-bottom: 1px solid var(--border);
 }
 
 .quick-filter {
     flex-shrink: 0;
-
     display: flex;
     align-items: center;
     gap: 6px;
-
     padding: 7px 11px;
-
     color: var(--muted);
-
     background: var(--card);
     border: 1px solid var(--border);
-
     border-radius: 20px;
-
     font-size: 11px;
 }
 
@@ -501,12 +436,9 @@ body.light .topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     padding: 11px 16px;
-
     color: var(--muted);
     font-size: 11px;
-
     border-bottom: 1px solid var(--border);
 }
 
@@ -524,23 +456,17 @@ body.light .topbar {
     padding: 12px;
 }
 
-
 /* =========================================================
    STATION CARD
    ========================================================= */
 
 .station-card {
     padding: 15px;
-
     margin-bottom: 10px;
-
     background: var(--card);
     border: 1px solid var(--border);
-
     border-radius: var(--radius);
-
     cursor: pointer;
-
     transition:
         transform 0.2s,
         border-color 0.2s,
@@ -572,11 +498,8 @@ body.light .topbar {
 
 .station-address {
     margin-top: 4px;
-
     color: var(--faint);
-
     font-size: 11px;
-
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -586,9 +509,7 @@ body.light .topbar {
     display: flex;
     align-items: center;
     gap: 5px;
-
     white-space: nowrap;
-
     font-family: var(--font-mono);
     font-size: 9px;
     font-weight: 600;
@@ -628,18 +549,14 @@ body.light .topbar {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-
     margin: 11px 0;
 }
 
 .info-pill {
     padding: 4px 7px;
-
     border: 1px solid var(--border);
     border-radius: 5px;
-
     color: var(--muted);
-
     font-family: var(--font-mono);
     font-size: 9px;
 }
@@ -651,7 +568,6 @@ body.light .topbar {
 .availability-head {
     display: flex;
     justify-content: space-between;
-
     color: var(--muted);
     font-size: 10px;
 }
@@ -663,9 +579,7 @@ body.light .topbar {
 
 .availability-bar {
     height: 4px;
-
     margin-top: 6px;
-
     background: #202b35;
     border-radius: 10px;
     overflow: hidden;
@@ -675,7 +589,6 @@ body.light .topbar {
     height: 100%;
     background: var(--green);
     border-radius: inherit;
-
     transition: width 0.5s;
 }
 
@@ -683,10 +596,8 @@ body.light .topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     margin-top: 12px;
     padding-top: 11px;
-
     border-top: 1px solid var(--border);
 }
 
@@ -715,12 +626,9 @@ body.light .topbar {
 .favorite-btn {
     width: 30px;
     height: 30px;
-
     border-radius: 7px;
-
     border: 1px solid var(--border);
     background: transparent;
-
     color: var(--muted);
 }
 
@@ -732,15 +640,11 @@ body.light .topbar {
 
 .book-btn {
     height: 30px;
-
     padding: 0 12px;
-
     border: 0;
     border-radius: 7px;
-
     background: var(--green);
     color: #03120d;
-
     font-size: 10px;
     font-weight: 700;
 }
@@ -748,7 +652,6 @@ body.light .topbar {
 .book-btn:hover {
     background: #1af5b2;
 }
-
 
 /* =========================================================
    MAP
@@ -778,7 +681,6 @@ body.light .topbar {
 .leaflet-popup-content-wrapper {
     background: var(--card);
     color: var(--text);
-
     border: 1px solid var(--border);
     border-radius: 12px;
 }
@@ -804,28 +706,21 @@ body.light .topbar {
 
 .popup-book {
     width: 100%;
-
     margin-top: 10px;
     padding: 8px;
-
     background: var(--green);
     color: #03120d;
-
     border: 0;
     border-radius: 7px;
-
     font-weight: 700;
     font-size: 11px;
 }
 
 .map-controls {
     position: absolute;
-
     top: 20px;
     right: 20px;
-
     z-index: 500;
-
     display: flex;
     flex-direction: column;
     gap: 7px;
@@ -834,12 +729,9 @@ body.light .topbar {
 .map-controls button {
     width: 40px;
     height: 40px;
-
     border-radius: 9px;
-
     border: 1px solid var(--border);
     background: rgba(13, 19, 26, 0.92);
-
     color: var(--text);
 }
 
@@ -877,22 +769,15 @@ body.light .saved-places-panel { background: rgba(255, 255, 255, 0.96); }
 
 .map-legend {
     position: absolute;
-
     left: 20px;
     bottom: 20px;
-
     z-index: 500;
-
     display: flex;
     gap: 13px;
-
     padding: 10px 13px;
-
     background: rgba(13, 19, 26, 0.92);
     border: 1px solid var(--border);
-
     border-radius: 9px;
-
     font-size: 10px;
     color: var(--muted);
 }
@@ -903,12 +788,9 @@ body.light .map-legend {
 
 .legend-dot {
     display: inline-block;
-
     width: 7px;
     height: 7px;
-
     margin-right: 4px;
-
     border-radius: 50%;
 }
 
@@ -926,21 +808,15 @@ body.light .map-legend {
 
 .map-summary {
     position: absolute;
-
     top: 20px;
     left: 20px;
-
     z-index: 500;
-
     display: flex;
     align-items: center;
     gap: 10px;
-
     padding: 10px 13px;
-
     background: rgba(13, 19, 26, 0.92);
     border: 1px solid var(--border);
-
     border-radius: 10px;
 }
 
@@ -951,12 +827,9 @@ body.light .map-summary {
 .summary-icon {
     width: 30px;
     height: 30px;
-
     display: grid;
     place-items: center;
-
     border-radius: 7px;
-
     color: var(--green);
     background: var(--green-soft);
 }
@@ -973,7 +846,6 @@ body.light .map-summary {
     font-size: 9px;
 }
 
-
 /* =========================================================
    DRAWER
    ========================================================= */
@@ -981,14 +853,10 @@ body.light .map-summary {
 .drawer-overlay {
     position: fixed;
     inset: 0;
-
     background: rgba(0, 0, 0, 0.35);
-
     z-index: 1100;
-
     opacity: 0;
     pointer-events: none;
-
     transition: 0.25s;
 }
 
@@ -999,28 +867,19 @@ body.light .map-summary {
 
 .station-drawer {
     position: fixed;
-
     top: 0;
     right: 0;
-
     width: 440px;
     max-width: 92vw;
     height: 100vh;
     height: 100dvh;
-
     padding: 30px 25px;
-
     background: var(--panel);
-
     border-left: 1px solid var(--border);
-
     z-index: 1200;
-
     overflow-y: auto;
-
     transform: translateX(100%);
     transition: transform 0.3s ease;
-
     box-shadow: var(--shadow);
 }
 
@@ -1030,18 +889,13 @@ body.light .map-summary {
 
 .drawer-close {
     position: absolute;
-
     top: 17px;
     right: 17px;
-
     width: 34px;
     height: 34px;
-
     border-radius: 8px;
-
     border: 1px solid var(--border);
     background: var(--card);
-
     color: var(--muted);
 }
 
@@ -1051,16 +905,13 @@ body.light .map-summary {
 
 .drawer-operator {
     color: var(--green);
-
     font-family: var(--font-mono);
     font-size: 9px;
-
     letter-spacing: 0.1em;
 }
 
 .drawer-title {
     margin: 5px 0;
-
     font-family: var(--font-display);
     font-size: 24px;
 }
@@ -1072,7 +923,6 @@ body.light .map-summary {
 
 .drawer-address {
     margin-top: 10px;
-
     color: var(--muted);
     font-size: 12px;
 }
@@ -1080,12 +930,9 @@ body.light .map-summary {
 .drawer-status-card {
     display: flex;
     justify-content: space-between;
-
     margin-top: 22px;
     padding: 17px;
-
     border-radius: 12px;
-
     background: var(--card);
     border: 1px solid var(--border);
 }
@@ -1100,7 +947,6 @@ body.light .map-summary {
 .drawer-stat strong {
     display: block;
     margin-top: 5px;
-
     font-family: var(--font-mono);
     font-size: 16px;
 }
@@ -1111,7 +957,6 @@ body.light .map-summary {
 
 .drawer-section h4 {
     margin: 0 0 11px;
-
     font-family: var(--font-display);
     font-size: 13px;
 }
@@ -1125,9 +970,7 @@ body.light .map-summary {
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     padding: 12px;
-
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 9px;
@@ -1142,12 +985,9 @@ body.light .map-summary {
 .charger-icon {
     width: 32px;
     height: 32px;
-
     display: grid;
     place-items: center;
-
     border-radius: 7px;
-
     background: var(--green-soft);
     color: var(--green);
 }
@@ -1176,21 +1016,16 @@ body.light .map-summary {
 
 .amenity {
     padding: 11px;
-
     background: var(--card);
     border: 1px solid var(--border);
-
     border-radius: 8px;
-
     color: var(--muted);
-
     font-size: 10px;
 }
 
 .drawer-buttons {
     display: flex;
     gap: 8px;
-
     margin-top: 25px;
 }
 
@@ -1238,21 +1073,16 @@ body.light .map-summary {
 .station-rating span { color: var(--muted); font-size: 10px; }
 .station-rating button { padding: 0; color: #ffbf43; border: 0; background: transparent; font-size: 16px; }
 
-
 /* =========================================================
    BUTTONS
    ========================================================= */
 
 .btn-primary {
     border: 0;
-
     padding: 11px 16px;
-
     border-radius: 8px;
-
     background: var(--green);
     color: #03120d;
-
     font-weight: 700;
     font-size: 12px;
 }
@@ -1263,21 +1093,16 @@ body.light .map-summary {
 
 .btn-secondary {
     border: 1px solid var(--border);
-
     padding: 11px 16px;
-
     border-radius: 8px;
-
     background: var(--card);
     color: var(--text);
-
     font-size: 12px;
 }
 
 .full-btn {
     width: 100%;
 }
-
 
 /* =========================================================
    MODALS
@@ -1286,21 +1111,15 @@ body.light .map-summary {
 .modal-overlay {
     position: fixed;
     inset: 0;
-
     z-index: 2000;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     padding: 20px;
-
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(8px);
-
     opacity: 0;
     pointer-events: none;
-
     transition: 0.2s;
 }
 
@@ -1314,18 +1133,12 @@ body.light .map-summary {
     max-width: 100%;
     max-height: 90vh;
     max-height: 90dvh;
-
     overflow-y: auto;
-
     padding: 25px;
-
     background: var(--panel);
-
     border: 1px solid var(--border);
     border-radius: 16px;
-
     box-shadow: var(--shadow);
-
     transform: translateY(15px) scale(0.98);
     transition: 0.2s;
 }
@@ -1342,16 +1155,13 @@ body.light .map-summary {
 
 .modal-eyebrow {
     color: var(--green);
-
     font-family: var(--font-mono);
     font-size: 8px;
-
     letter-spacing: 0.15em;
 }
 
 .modal h2 {
     margin: 4px 0 0;
-
     font-family: var(--font-display);
     font-size: 20px;
 }
@@ -1359,14 +1169,11 @@ body.light .map-summary {
 .modal-close {
     width: 32px;
     height: 32px;
-
     border: 1px solid var(--border);
     border-radius: 7px;
-
     background: var(--card);
     color: var(--muted);
 }
-
 
 /* =========================================================
    FILTERS
@@ -1378,11 +1185,8 @@ body.light .map-summary {
 
 .filter-section > label:first-child {
     display: block;
-
     margin-bottom: 9px;
-
     color: var(--muted);
-
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.07em;
@@ -1395,14 +1199,10 @@ body.light .map-summary {
 
 .option-btn {
     padding: 8px 15px;
-
     background: var(--card);
     border: 1px solid var(--border);
-
     color: var(--muted);
-
     border-radius: 7px;
-
     font-size: 11px;
 }
 
@@ -1415,14 +1215,10 @@ body.light .map-summary {
 .filter-section select,
 .filter-section input[type="number"] {
     width: 100%;
-
     padding: 10px;
-
     background: var(--card);
     border: 1px solid var(--border);
-
     color: var(--text);
-
     border-radius: 8px;
     outline: none;
 }
@@ -1435,9 +1231,7 @@ input[type="range"] {
 .range-labels {
     display: flex;
     justify-content: space-between;
-
     margin-top: 5px;
-
     color: var(--faint);
     font-family: var(--font-mono);
     font-size: 9px;
@@ -1447,7 +1241,6 @@ input[type="range"] {
     display: flex !important;
     align-items: center;
     gap: 9px;
-
     color: var(--text) !important;
     text-transform: none !important;
     cursor: pointer;
@@ -1460,29 +1253,20 @@ input[type="range"] {
 .switch {
     width: 38px;
     height: 20px;
-
     background: #27323c;
-
     border-radius: 20px;
-
     position: relative;
 }
 
 .switch::after {
     content: "";
-
     position: absolute;
-
     top: 3px;
     left: 3px;
-
     width: 14px;
     height: 14px;
-
     border-radius: 50%;
-
     background: white;
-
     transition: 0.2s;
 }
 
@@ -1511,16 +1295,11 @@ input[type="range"] {
 
 .amenities span {
     display: block;
-
     padding: 10px;
-
     background: var(--card);
     border: 1px solid var(--border);
-
     border-radius: 8px;
-
     color: var(--muted);
-
     font-size: 10px;
 }
 
@@ -1533,14 +1312,12 @@ input[type="range"] {
 .modal-actions {
     display: flex;
     gap: 8px;
-
     margin-top: 28px;
 }
 
 .modal-actions button {
     flex: 1;
 }
-
 
 /* =========================================================
    BOOKING
@@ -1556,9 +1333,7 @@ input[type="range"] {
     display: flex;
     align-items: center;
     gap: 5px;
-
     color: var(--faint);
-
     font-size: 8px;
     white-space: nowrap;
 }
@@ -1566,12 +1341,9 @@ input[type="range"] {
 .progress-step span {
     width: 23px;
     height: 23px;
-
     display: grid;
     place-items: center;
-
     border-radius: 50%;
-
     background: var(--card);
     border: 1px solid var(--border);
 }
@@ -1592,9 +1364,7 @@ input[type="range"] {
 .progress-line {
     flex: 1;
     height: 1px;
-
     margin: 0 7px;
-
     background: var(--border);
 }
 
@@ -1615,20 +1385,15 @@ input[type="range"] {
 .charger-choice {
     display: grid;
     grid-template-columns: 1fr 1fr;
-
     gap: 8px;
 }
 
 .charger-choice button {
     padding: 14px;
-
     text-align: left;
-
     background: var(--card);
     border: 1px solid var(--border);
-
     color: var(--text);
-
     border-radius: 9px;
 }
 
@@ -1646,7 +1411,6 @@ input[type="range"] {
 .choice-meta {
     display: block;
     margin-top: 5px;
-
     color: var(--muted);
     font-family: var(--font-mono);
     font-size: 9px;
@@ -1665,37 +1429,27 @@ input[type="range"] {
 .booking-form input,
 .booking-form select {
     width: 100%;
-
     margin-top: 5px;
-
     padding: 10px;
-
     border: 1px solid var(--border);
     border-radius: 8px;
-
     background: var(--card);
     color: var(--text);
-
     outline: none;
 }
 
 .booking-summary {
     padding: 15px;
-
     margin-bottom: 15px;
-
     border: 1px solid var(--border);
     border-radius: 10px;
-
     background: var(--card);
 }
 
 .summary-line {
     display: flex;
     justify-content: space-between;
-
     padding: 7px 0;
-
     color: var(--muted);
     font-size: 10px;
 }
@@ -1707,9 +1461,7 @@ input[type="range"] {
 .summary-total {
     margin-top: 7px;
     padding-top: 10px;
-
     border-top: 1px solid var(--border);
-
     font-size: 13px;
 }
 
@@ -1780,32 +1532,23 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 .auth-links button { padding: 0; color: var(--green); background: none; border: 0; font-size: 10px; }
 .auth-card .btn-primary { min-height: 44px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0, 229, 160, 0.16); }
 
-
 /* =========================================================
    NOTIFICATIONS
    ========================================================= */
 
 .notification-panel {
     position: fixed;
-
     top: 65px;
     right: 75px;
-
     width: 350px;
-
     background: var(--panel);
-
     border: 1px solid var(--border);
     border-radius: 14px;
-
     z-index: 1500;
-
     box-shadow: var(--shadow);
-
     transform: translateY(-10px);
     opacity: 0;
     pointer-events: none;
-
     transition: 0.2s;
 }
 
@@ -1818,15 +1561,12 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 .notification-header {
     display: flex;
     justify-content: space-between;
-
     padding: 17px;
-
     border-bottom: 1px solid var(--border);
 }
 
 .notification-header h3 {
     margin: 4px 0 0;
-
     font-family: var(--font-display);
     font-size: 16px;
 }
@@ -1834,18 +1574,14 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 .notification-header button {
     border: 0;
     background: none;
-
     color: var(--green);
-
     font-size: 9px;
 }
 
 .notification {
     display: flex;
     gap: 11px;
-
     padding: 14px;
-
     border-bottom: 1px solid var(--border);
 }
 
@@ -1856,12 +1592,9 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 .notification-icon {
     width: 32px;
     height: 32px;
-
     flex-shrink: 0;
-
     display: grid;
     place-items: center;
-
     border-radius: 8px;
 }
 
@@ -1886,7 +1619,6 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 
 .notification p {
     margin: 4px 0;
-
     color: var(--muted);
     font-size: 9px;
     line-height: 1.5;
@@ -1897,7 +1629,6 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
     font-size: 8px;
 }
 
-
 /* =========================================================
    CALCULATOR
    ========================================================= */
@@ -1905,9 +1636,7 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 .calculator-inputs {
     display: grid;
     grid-template-columns: 1fr 1fr;
-
     gap: 12px;
-
     margin-top: 25px;
 }
 
@@ -1919,9 +1648,7 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 .input-unit {
     display: flex;
     align-items: center;
-
     margin-top: 5px;
-
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -1929,19 +1656,15 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 
 .input-unit input {
     width: 100%;
-
     padding: 10px;
-
     background: transparent;
     color: var(--text);
-
     border: 0;
     outline: 0;
 }
 
 .input-unit span {
     padding-right: 10px;
-
     color: var(--faint);
     font-family: var(--font-mono);
     font-size: 9px;
@@ -1950,15 +1673,12 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 .calculator-result {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-
     gap: 8px;
-
     margin-top: 20px;
 }
 
 .calculator-result div {
     padding: 13px;
-
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 9px;
@@ -1966,25 +1686,20 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 
 .calculator-result span {
     display: block;
-
     color: var(--faint);
     font-size: 8px;
 }
 
 .calculator-result strong {
     display: block;
-
     margin-top: 6px;
-
     color: var(--green);
-
     font-family: var(--font-mono);
     font-size: 12px;
 }
 
 .calculator-compare-heading {
     margin: 22px 0 11px;
-
     font-family: var(--font-display);
     font-size: 13px;
 }
@@ -1999,9 +1714,7 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-
     padding: 12px;
-
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 9px;
@@ -2015,7 +1728,6 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 .compare-station-row > div:first-child span {
     display: block;
     margin-top: 3px;
-
     color: var(--muted);
     font-family: var(--font-mono);
     font-size: 9px;
@@ -2026,7 +1738,6 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
     flex-direction: column;
     align-items: flex-end;
     gap: 3px;
-
     flex-shrink: 0;
     text-align: right;
 }
@@ -2047,34 +1758,24 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
     color: var(--yellow);
 }
 
-
 /* =========================================================
    TOAST
    ========================================================= */
 
 .toast {
     position: fixed;
-
     right: 25px;
     bottom: 25px;
-
     z-index: 3000;
-
     display: flex;
     align-items: center;
     gap: 10px;
-
     min-width: 280px;
-
     padding: 13px;
-
     background: var(--panel);
-
     border: 1px solid var(--border);
     border-radius: 11px;
-
     box-shadow: var(--shadow);
-
     transform: translateY(120px);
     transition: 0.3s;
 }
@@ -2086,12 +1787,9 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 .toast-icon {
     width: 32px;
     height: 32px;
-
     display: grid;
     place-items: center;
-
     border-radius: 8px;
-
     color: var(--green);
     background: var(--green-soft);
 }
@@ -2102,11 +1800,9 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 
 .toast p {
     margin: 3px 0 0;
-
     color: var(--muted);
     font-size: 9px;
 }
-
 
 /* =========================================================
    MOBILE NAV
@@ -2115,7 +1811,6 @@ body.light .auth-label input, body.light .auth-label select { background: var(--
 .mobile-nav {
     display: none;
 }
-
 
 /* =========================================================
    LIGHT MODE
@@ -2126,121 +1821,92 @@ body.light {
     --panel: #ffffff;
     --card: #f5f8fa;
     --card-hover: #edf3f5;
-
     --border: #dce4e8;
     --border-light: #cbd6dc;
-
     --text: #152027;
     --muted: #667680;
     --faint: #91a0a9;
-
     --green: #00a978;
     --green-dark: #008b64;
     --green-soft: rgba(0, 169, 120, 0.1);
 }
-
 
 /* =========================================================
    RESPONSIVE
    ========================================================= */
 
 @media (max-width: 1100px) {
-
     .top-actions .location-btn span,
     .top-actions .live-status,
     .orders-btn span {
         display: none;
     }
-
     .orders-btn { width: 38px; padding: 0; justify-content: center; }
-
     .sidebar {
         width: 350px;
         min-width: 350px;
     }
-
 }
 
 @media (max-width: 800px) {
-
     body {
         overflow: hidden;
     }
-
     .topbar {
         height: 62px;
         padding: 0 12px;
         gap: 10px;
     }
-
     .brand {
         min-width: auto;
     }
-
     .brand-subtitle,
     .profile-btn span,
     .profile-btn > i {
         display: none;
     }
-
     .brand-name {
         font-size: 17px;
     }
-
     .brand-icon {
         width: 33px;
         height: 33px;
     }
-
     .search-container {
         max-width: none;
     }
-
     .top-actions {
         gap: 5px;
     }
-
     .top-actions .icon-btn:not(#calculatorBtn) {
         display: none;
     }
-
     .top-actions #calculatorBtn {
         display: flex;
     }
-
     .profile-btn {
         display: none;
     }
-
     .main-layout {
         height: calc(100vh - 62px);
         height: calc(100dvh - 62px); /* FIX: dynamic-viewport fallback, see .app above */
         display: block;
     }
-
     .map-area {
         height: 100%;
     }
-
     .sidebar {
         position: absolute;
-
         bottom: 65px;
         left: 8px;
         right: 8px;
-
         width: auto;
         min-width: 0;
-
         height: 37vh;
-
         border: 1px solid var(--border);
         border-radius: 16px;
-
         z-index: 800;
-
         box-shadow: var(--shadow);
-
         /* FIX (bottom sheet feature): the sheet used to only ever have the
            one fixed CSS height above. Now JS (initBottomSheet) takes over
            and animates this height between "peek / default / full" snap
@@ -2251,180 +1917,133 @@ body.light {
         transition: height 0.28s cubic-bezier(0.22, 0.9, 0.32, 1);
         will-change: height;
     }
-
     .sidebar.dragging {
         transition: none;
     }
-
     .sheet-handle {
         display: flex;
         flex-shrink: 0;
         align-items: center;
         justify-content: center;
-
         height: 22px;
-
         cursor: grab;
         touch-action: none;
         -webkit-user-select: none;
         user-select: none;
     }
-
     .sheet-handle::before {
         content: "";
-
         width: 38px;
         height: 4px;
-
         border-radius: 3px;
-
         background: var(--border-light);
     }
-
     .sheet-handle:active {
         cursor: grabbing;
     }
-
     .sheet-handle:active::before {
         background: var(--green);
     }
-
     .sidebar-header {
         padding: 13px;
     }
-
     .quick-filters {
         padding: 9px;
     }
-
     .sort-row {
         display: none;
     }
-
     .station-list {
         padding: 8px;
         touch-action: pan-y;
     }
-
     .station-card {
         margin-bottom: 7px;
     }
-
     .map-summary {
         top: 12px;
         left: 12px;
     }
-
     .map-controls {
         top: 12px;
         right: 12px;
     }
-
     .map-legend {
         display: none;
     }
-
     .mobile-nav {
         position: fixed;
-
         bottom: 0;
         left: 0;
         right: 0;
-
         height: 65px;
-
         display: flex;
         justify-content: space-around;
         align-items: center;
-
         background: var(--panel);
         border-top: 1px solid var(--border);
-
         z-index: 1000;
     }
-
     .mobile-nav button {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 4px;
-
         border: 0;
         background: transparent;
-
         color: var(--muted);
-
         font-size: 9px;
     }
-
     .mobile-nav button i {
         font-size: 16px;
     }
-
     .mobile-nav button.active {
         color: var(--green);
     }
-
     .station-drawer {
         top: auto;
         bottom: 0;
-
         width: 100%;
         max-width: 100%;
-
         height: 82vh;
         height: 82dvh;
-
         border-left: 0;
         border-top: 1px solid var(--border);
-
         border-radius: 20px 20px 0 0;
-
         transform: translateY(100%);
     }
-
     .station-drawer.open {
         transform: translateY(0);
     }
-
     .notification-panel {
         top: 62px;
         right: 10px;
         left: 10px;
-
         width: auto;
     }
-
 }
 
 @media (max-width: 500px) {
-
     .search-container {
         height: 38px;
     }
-
     .search-container input {
         font-size: 11px;
     }
-
     .location-btn {
         width: 36px;
         padding: 0;
         justify-content: center;
     }
-
     .location-btn span {
         display: none;
     }
-
     .sidebar {
         height: 40vh;
     }
-
     .sidebar-header h1 {
         font-size: 15px;
     }
-
     .filter-modal,
     .booking-modal,
     .calculator-modal,
@@ -2433,48 +2052,34 @@ body.light {
     .settings-modal {
         padding: 18px;
     }
-
     .calculator-inputs {
         grid-template-columns: 1fr;
     }
-
     .calculator-result {
         grid-template-columns: 1fr;
     }
-
     .charger-choice {
         grid-template-columns: 1fr;
     }
-
     .amenities {
         grid-template-columns: 1fr;
     }
-
     .auth-card { padding: 22px; }
-
     .auth-card h1 { font-size: 21px; }
-
     .auth-links { gap: 14px; flex-wrap: wrap; }
-
 }
 
 @media (max-width: 360px) {
-
     .auth-card { padding: 18px; border-radius: 16px; }
-
     .auth-card h1 { font-size: 19px; }
-
     .auth-brand { margin-bottom: 18px; }
-
 }
-
 
 /* =========================================================
    DEVICE-ADAPTIVE ENHANCEMENTS
    ========================================================= */
 
 @media (hover: none) and (pointer: coarse) {
-
     .icon-btn,
     .map-controls button,
     .favorite-btn,
@@ -2483,7 +2088,6 @@ body.light {
         min-width: 44px;
         min-height: 44px;
     }
-
     .book-btn,
     .btn-primary,
     .btn-secondary,
@@ -2491,7 +2095,6 @@ body.light {
     .option-btn {
         min-height: 44px;
     }
-
     .station-card:hover {
         transform: none;
     }
@@ -2502,20 +2105,16 @@ body.light {
 }
 
 @media (max-width: 380px) {
-
     .compare-station-row {
         flex-direction: column;
         align-items: flex-start;
         gap: 6px;
     }
-
     .compare-station-figures {
         align-items: flex-start;
         text-align: left;
     }
-
 }
-
 
 /* =========================================================
    MOBILE BOTTOM SHEET — desktop no-op
