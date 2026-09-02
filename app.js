@@ -2,61 +2,39 @@
    VOLTMAP — SMART EV CHARGING PLATFORM
    Frontend version
    ========================================================= */
-
 const API_BASE = "https://ev-charging-station-0lbc.onrender.com";
-
-/* =========================================================
-   FIXED ADMIN ACCOUNT
-   Only this single email/password combination may ever sign
-   in as admin, and no new admin accounts can be created from
-   the sign-up form. Change these two values to your own —
-   for a real deployment, move this check to the backend
-   instead of trusting it purely on the frontend.
-   ========================================================= */
-const ADMIN_CREDENTIALS = {
-    email: "sachinmaurya43570@gmail.com",
-    password: "Sachin@9580"
-};
-
 /* =========================================================
    GOOGLE SIGN-IN
    Replace with your OAuth 2.0 Client ID from
    https://console.cloud.google.com/apis/credentials
    ========================================================= */
 const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com";
-
 async function apiRequest(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
         headers: { "Content-Type": "application/json", ...(options.headers || {}) },
         ...options
     });
-
     let payload = null;
     try {
         payload = await response.json();
     } catch (parseError) {
         payload = {};
     }
-
     if (!response.ok) {
         const error = new Error(payload.message || `Request failed (${response.status})`);
         error.isApiError = true;
         throw error;
     }
-
     return payload;
 }
-
 function syncToBackend(path, options) {
     apiRequest(path, options).catch(() => {
         // Browser/localStorage remains usable when backend is unavailable.
     });
 }
-
 /* =========================================================
    DEMO STATION DATA
    ========================================================= */
-
 const stations = [
     { id: 1, name: "VoltMap Energy Hub", operator: "VoltMap Energy", address: "Whitefield Main Road, Bengaluru", lat: 12.9698, lng: 77.7500, chargerType: "DC", connector: "CCS2", power: 120, price: 18, available: 6, total: 8, rating: 4.8, reviews: 126, open: true, amenities: ["cafe", "parking", "wifi", "restroom"], distance: 1.8, favorite: false },
     { id: 2, name: "ChargeZone Whitefield", operator: "ChargeZone", address: "ITPL Main Road, Whitefield", lat: 12.9850, lng: 77.7350, chargerType: "DC", connector: "CCS2", power: 150, price: 20, available: 2, total: 6, rating: 4.7, reviews: 98, open: true, amenities: ["parking", "wifi"], distance: 2.4, favorite: false },
@@ -74,11 +52,9 @@ const stations = [
     { id: 14, name: "Sarjapur Road EV Lounge", operator: "ChargeZone", address: "Sarjapur Main Road, Bengaluru", lat: 12.9103, lng: 77.6880, chargerType: "DC", connector: "CHAdeMO", power: 100, price: 19, available: 5, total: 8, rating: 4.6, reviews: 83, open: true, amenities: ["cafe", "parking", "wifi", "restroom"], distance: 13.4, favorite: false },
     { id: 15, name: "MG Road City Charger", operator: "BESCOM", address: "MG Road, Bengaluru", lat: 12.9756, lng: 77.6065, chargerType: "DC", connector: "CCS2", power: 60, price: 16, available: 1, total: 4, rating: 4.3, reviews: 67, open: true, amenities: ["cafe", "parking", "wifi"], distance: 9.2, favorite: false }
 ];
-
 /* =========================================================
    STATE
    ========================================================= */
-
 let filteredStations = [...stations];
 let selectedStation = null;
 let selectedCharger = null;
@@ -92,11 +68,9 @@ let currentUser = null;
 let selectedPaymentMethod = "qr";
 let bookingDraft = {};
 let currentPaymentAmount = 0;
-
 /* =========================================================
    DOM
    ========================================================= */
-
 const stationList = document.getElementById("stationList");
 const stationCount = document.getElementById("stationCount");
 const mapStationCount = document.getElementById("mapStationCount");
@@ -108,239 +82,65 @@ const filterModal = document.getElementById("filterModal");
 const bookingModal = document.getElementById("bookingModal");
 const notificationPanel = document.getElementById("notificationPanel");
 const toast = document.getElementById("toast");
-
 /* =========================================================
    FAVORITES PERSISTENCE
    (previously favorites reset on every reload — never saved)
    ========================================================= */
-
 function loadFavorites() {
     const saved = JSON.parse(localStorage.getItem("voltmap-favorites") || "[]");
     stations.forEach(s => { s.favorite = saved.includes(s.id); });
 }
-
 function persistFavorites() {
     const favoriteIds = stations.filter(s => s.favorite).map(s => s.id);
     localStorage.setItem("voltmap-favorites", JSON.stringify(favoriteIds));
 }
-
 /* =========================================================
    INITIALIZE
    ========================================================= */
-
 document.addEventListener("DOMContentLoaded", () => {
-
     loadFavorites();
-
     try { initializeMap(); }
     catch (mapError) { console.error("Map failed to initialize:", mapError); }
-
     try { renderStations(); }
     catch (renderError) { console.error("Station list failed to render:", renderError); }
-
     try { setupEvents(); }
     catch (eventsError) { console.error("UI events failed to bind:", eventsError); }
-
     updateStats();
-
     try { initializeTheme(); }
     catch (themeError) { console.error("Theme failed to initialize:", themeError); }
-
     try { initializeAuth(); }
     catch (authError) { console.error("Auth failed to initialize:", authError); }
-
+    try { initBottomSheet(); }
+    catch (sheetError) { console.error("Bottom sheet failed to initialize:", sheetError); }
     simulateLiveUpdates();
-
-    /* =========================================================
-   GOOGLE-MAPS-STYLE BOTTOM SHEET
-   ---------------------------------------------------------
-   Drop this into app.js and call initBottomSheet() once,
-   after the DOM is ready (e.g. inside your existing
-   DOMContentLoaded / init() function).
-
-   It matches the markup/CSS already in index.html + style.css:
-     - #sidebar        the sheet itself (.sidebar, mobile only)
-     - #sheetHandle     the drag handle (.sheet-handle)
-     - #stationList     the scrollable list inside the sheet
-
-   Behaviour:
-     - Drag the handle up/down to resize the sheet.
-     - Snaps to one of three heights on release: peek, default, full.
-     - A fast flick (high velocity) snaps in the flick direction
-       even if the sheet hasn't crossed the midpoint yet.
-     - While the sheet is not "full", dragging the handle takes
-       priority over the list's own scrolling; once "full", the
-       handle still works, and the list scrolls normally.
-   ========================================================= */
-
-function initBottomSheet() {
-    const sheet = document.getElementById("sidebar");
-    const handle = document.getElementById("sheetHandle");
-
-    if (!sheet || !handle) return;
-
-    // Snap points, as a fraction of the viewport height.
-    // Tweak these to taste — they mirror the sheet's default
-    // mobile heights already set in the CSS (37vh / 40vh).
-    const SNAP_POINTS = {
-        peek: 0.14,
-        default: 0.4,
-        full: 0.88
-    };
-
-    let currentSnap = "default";
-    let startY = 0;
-    let startHeight = 0;
-    let dragging = false;
-
-    function vh(fraction) {
-        return window.innerHeight * fraction;
-    }
-
-    function setHeight(px) {
-        sheet.style.height = `${px}px`;
-    }
-
-    function applySnap(name) {
-        currentSnap = name;
-        sheet.classList.remove("dragging");
-        setHeight(vh(SNAP_POINTS[name]));
-    }
-
-    function nearestSnap(px, velocity) {
-        // A fast flick wins outright, in the direction of the flick.
-        const FLICK_VELOCITY = 0.6; // px/ms
-        if (Math.abs(velocity) > FLICK_VELOCITY) {
-            return velocity < 0 ? "full" : "peek";
-        }
-
-        const entries = Object.entries(SNAP_POINTS).map(([name, frac]) => [name, vh(frac)]);
-        entries.sort((a, b) => Math.abs(px - a[1]) - Math.abs(px - b[1]));
-        return entries[0][0];
-    }
-
-    function clamp(px) {
-        return Math.min(vh(SNAP_POINTS.full), Math.max(vh(SNAP_POINTS.peek), px));
-    }
-
-    function onPointerDown(e) {
-        // Only take over the drag from the handle itself, so the
-        // station list underneath keeps its own normal scrolling.
-        dragging = true;
-        startY = e.touches ? e.touches[0].clientY : e.clientY;
-        startHeight = sheet.getBoundingClientRect().height;
-        sheet.classList.add("dragging");
-        document.body.style.userSelect = "none";
-    }
-
-    let lastY = 0;
-    let lastT = 0;
-    let velocity = 0;
-
-    function onPointerMove(e) {
-        if (!dragging) return;
-
-        const y = e.touches ? e.touches[0].clientY : e.clientY;
-        const now = performance.now();
-
-        if (lastT) {
-            const dt = now - lastT || 1;
-            velocity = (y - lastY) / dt; // px/ms, positive = moving down
-        }
-        lastY = y;
-        lastT = now;
-
-        const delta = startY - y; // dragging up increases height
-        setHeight(clamp(startHeight + delta));
-
-        e.preventDefault();
-    }
-
-    function onPointerUp() {
-        if (!dragging) return;
-        dragging = false;
-
-        document.body.style.userSelect = "";
-
-        const finalHeight = sheet.getBoundingClientRect().height;
-        applySnap(nearestSnap(finalHeight, velocity));
-
-        velocity = 0;
-        lastT = 0;
-    }
-
-    handle.addEventListener("touchstart", onPointerDown, { passive: true });
-    handle.addEventListener("touchmove", onPointerMove, { passive: false });
-    handle.addEventListener("touchend", onPointerUp);
-
-    handle.addEventListener("mousedown", onPointerDown);
-    window.addEventListener("mousemove", onPointerMove);
-    window.addEventListener("mouseup", onPointerUp);
-
-    // Tapping the handle (no real drag) toggles between default and full,
-    // which is the behaviour people expect from the Google Maps handle.
-    let tapStartTime = 0;
-    handle.addEventListener("touchstart", () => (tapStartTime = Date.now()), { passive: true });
-    handle.addEventListener("touchend", () => {
-        if (Date.now() - tapStartTime < 200 && Math.abs(velocity) < 0.05) {
-            applySnap(currentSnap === "full" ? "default" : "full");
-        }
-    });
-
-    // Re-clamp on resize/orientation change so the sheet never ends up
-    // taller than the viewport allows.
-    window.addEventListener("resize", () => applySnap(currentSnap));
-
-    // Start at the default snap point.
-    applySnap("default");
-}
-
-/* Call this once your DOM is ready — for example, near the rest of
-   your init calls:
-
-   document.addEventListener("DOMContentLoaded", () => {
-       ...
-       initBottomSheet();
-   });
-*/
 });
-
 /* =========================================================
    MAP
    ========================================================= */
-
 function initializeMap() {
     map = L.map("map", { zoomControl: false }).setView([12.9716, 77.5946], 12);
     updateMapTheme();
     renderMarkers();
     renderSavedPlaces();
 }
-
 function updateMapTheme() {
     if (!map) return;
-
     if (map.baseLayer) map.removeLayer(map.baseLayer);
-
     const light = document.body.classList.contains("light");
-
     map.baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap contributors",
         maxZoom: 19,
         subdomains: "abc"
     }).addTo(map);
-
     document.getElementById("map").classList.toggle("light-map", light);
 }
-
 /* =========================================================
    CUSTOM MARKER
    ========================================================= */
-
 function createMarkerIcon(station) {
     let color = "#00e5a0";
     if (station.available === 0) color = "#ff5c5c";
     else if (station.available <= 2) color = "#ffb020";
-
     return L.divIcon({
         className: "custom-marker",
         html: `
@@ -354,20 +154,15 @@ function createMarkerIcon(station) {
         iconAnchor: [17, 34]
     });
 }
-
 /* =========================================================
    RENDER MARKERS
    ========================================================= */
-
 function renderMarkers() {
     if (!map) return;
-
     Object.values(markers).forEach(marker => map.removeLayer(marker));
     markers = {};
-
     filteredStations.forEach(station => {
         const marker = L.marker([station.lat, station.lng], { icon: createMarkerIcon(station) }).addTo(map);
-
         marker.bindPopup(`
             <div>
                 <div class="popup-title">${station.name}</div>
@@ -377,23 +172,18 @@ function renderMarkers() {
                 <button class="popup-book" onclick="openStation(${station.id})">View station</button>
             </div>
         `);
-
         marker.on("click", () => {
             selectedStation = station;
             highlightCard(station.id);
         });
-
         markers[station.id] = marker;
     });
 }
-
 /* =========================================================
    STATION CARDS
    ========================================================= */
-
 function renderStations() {
     stationList.innerHTML = "";
-
     if (filteredStations.length === 0) {
         stationList.innerHTML = `
             <div style="padding:40px 20px;text-align:center;">
@@ -412,15 +202,12 @@ function renderStations() {
         renderMarkers();
         return;
     }
-
     filteredStations.forEach(station => {
         const card = document.createElement("div");
         card.className = "station-card";
         card.dataset.id = station.id;
-
         let statusClass = "available";
         let statusText = "AVAILABLE";
-
         if (station.available === 0) {
             statusClass = "full";
             statusText = "FULL";
@@ -428,9 +215,7 @@ function renderStations() {
             statusClass = "limited";
             statusText = "LIMITED";
         }
-
         const percentage = (station.available / station.total) * 100;
-
         card.innerHTML = `
             <div class="station-top">
                 <div>
@@ -442,7 +227,6 @@ function renderStations() {
                     ${statusText}
                 </div>
             </div>
-
             <div class="station-info-row">
                 <span class="info-pill">${station.chargerType}</span>
                 <span class="info-pill">${station.connector}</span>
@@ -450,7 +234,6 @@ function renderStations() {
                 <span class="info-pill">${station.distance} km</span>
                 <span class="info-pill"><i class="fa-regular fa-clock"></i> ${getWaitingTime(station)}</span>
             </div>
-
             <div class="availability">
                 <div class="availability-head">
                     <span>Charger availability</span>
@@ -462,7 +245,6 @@ function renderStations() {
                     </div>
                 </div>
             </div>
-
             <div class="station-bottom">
                 <div>
                     <div class="price">₹${station.price}<span>/kWh</span></div>
@@ -470,7 +252,6 @@ function renderStations() {
                         <span style="color:var(--faint);font-size:8px;">(${station.reviews})</span>
                     </div>
                 </div>
-
                 <div class="station-actions">
                     <button class="favorite-btn ${station.favorite ? "active" : ""}"
                         onclick="event.stopPropagation(); toggleFavorite(${station.id})">
@@ -482,31 +263,23 @@ function renderStations() {
                 </div>
             </div>
         `;
-
         card.addEventListener("click", () => openStation(station.id));
-
         card.querySelector(".station-book").addEventListener("click", event => {
             event.stopPropagation();
             startBooking(station.id);
         });
-
         stationList.appendChild(card);
     });
-
     updateStats();
     renderMarkers();
 }
-
 /* =========================================================
    OPEN STATION
    ========================================================= */
-
 function openStation(id) {
     const station = stations.find(s => s.id === id);
     if (!station) return;
-
     selectedStation = station;
-
     stationDetails.innerHTML = `
         <div class="drawer-hero">
             <div class="drawer-operator">${station.operator}</div>
@@ -520,7 +293,6 @@ function openStation(id) {
                 <span style="color:var(--green)">${station.distance} km away</span>
             </div>
         </div>
-
         <div class="drawer-status-card">
             <div class="drawer-stat">
                 <span>Available</span>
@@ -537,17 +309,14 @@ function openStation(id) {
                 <strong>₹${station.price}</strong>
             </div>
         </div>
-
         <div class="drawer-section">
             <h4>Available chargers</h4>
             <div class="charger-list">${createChargers(station)}</div>
         </div>
-
         <div class="drawer-section">
             <h4>Amenities</h4>
             <div class="amenity-grid">${createAmenities(station)}</div>
         </div>
-
         <div class="drawer-section">
             <h4>Station information</h4>
             <div style="padding:13px;background:var(--card);border:1px solid var(--border);border-radius:9px;
@@ -557,27 +326,22 @@ function openStation(id) {
                 <div><strong style="color:var(--text)">Last updated:</strong> Just now</div>
             </div>
         </div>
-
         <div class="drawer-section">
             <h4>Travel & waiting time</h4>
             ${createTravelDetails(station)}
         </div>
-
         <div class="drawer-section">
             <h4>Rate this station</h4>
             ${createStationRating(station)}
         </div>
-
         <div class="drawer-section">
             <h4>While you charge</h4>
             <div class="nearby-recommendations">${createRecommendations(station)}</div>
         </div>
-
         <div class="drawer-section">
             <h4>Station support</h4>
             ${createStationContact(station)}
         </div>
-
         <div class="drawer-buttons">
             <button type="button" class="btn-secondary drawer-directions" data-station-id="${station.id}">
                 <i class="fa-solid fa-route"></i> Directions
@@ -588,29 +352,22 @@ function openStation(id) {
             </button>
         </div>
     `;
-
     stationDetails.querySelector(".drawer-directions")?.addEventListener("click", () => getDirections(station.id));
     stationDetails.querySelector(".drawer-book")?.addEventListener("click", () => startBooking(station.id));
-
     stationDrawer.classList.add("open");
     drawerOverlay.classList.add("open");
-
     if (markers[id]) {
         map.setView([station.lat, station.lng], 15, { animate: true });
         markers[id].openPopup();
     }
-
     highlightCard(id);
 }
-
 /* =========================================================
    CHARGERS
    ========================================================= */
-
 function createChargers(station) {
     const count = Math.min(station.total, 4);
     let html = "";
-
     for (let i = 1; i <= count; i++) {
         const active = i <= station.available;
         html += `
@@ -628,14 +385,11 @@ function createChargers(station) {
             </div>
         `;
     }
-
     return html;
 }
-
 /* =========================================================
    AMENITIES
    ========================================================= */
-
 function createAmenities(station) {
     const names = {
         cafe: ["fa-mug-hot", "Cafe"],
@@ -643,7 +397,6 @@ function createAmenities(station) {
         wifi: ["fa-wifi", "Wi-Fi"],
         restroom: ["fa-restroom", "Restroom"]
     };
-
     return station.amenities.map(a => {
         const item = names[a];
         if (!item) return "";
@@ -655,18 +408,15 @@ function createAmenities(station) {
         `;
     }).join("");
 }
-
 /* =========================================================
    RECOMMENDATIONS
    ========================================================= */
-
 function createRecommendations(station) {
     const places = [
         ["fa-mug-hot", "Cafe", `Brew & Bean · ${station.distance < 4 ? "3" : "6"} min walk`],
         ["fa-hotel", "Hotel", "Comfort stay & lobby workspace nearby"],
         ["fa-store", "Nearby mall", "Shopping, dining and essentials"]
     ];
-
     return places.map(place => `
         <div class="recommendation-place">
             <i class="fa-solid ${place[0]}"></i>
@@ -677,26 +427,21 @@ function createRecommendations(station) {
         </div>
     `).join("");
 }
-
 /* =========================================================
    TRAVEL / RATINGS / SUPPORT
    ========================================================= */
-
 function getWaitingTime(station) {
     if (station.available === 0) return "25–35 min";
     if (station.available <= 2) return "10–15 min";
     return "No expected wait";
 }
-
 function getTravelTime(station) {
     const distance = userLocation
         ? calculateDistanceKm(userLocation.lat, userLocation.lng, station.lat, station.lng)
         : station.distance;
-
     const minutes = Math.max(4, Math.round((distance / 28) * 60));
     return `${minutes} min`;
 }
-
 function calculateDistanceKm(lat1, lng1, lat2, lng2) {
     const toRadians = value => (value * Math.PI) / 180;
     const dLat = toRadians(lat2 - lat1);
@@ -704,11 +449,9 @@ function calculateDistanceKm(lat1, lng1, lat2, lng2) {
     const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) ** 2;
     return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
-
 function createTravelDetails(station) {
     const eta = getTravelTime(station);
     const wait = getWaitingTime(station);
-
     return `
         <div class="travel-overview">
             <div class="travel-stat">
@@ -720,7 +463,6 @@ function createTravelDetails(station) {
                 <strong>${wait}</strong>
             </div>
         </div>
-
         <button class="route-choice recommended" onclick="startSuggestedRoute(${station.id}, 'best')">
             <div>
                 <strong>Best route · recommended</strong>
@@ -728,7 +470,6 @@ function createTravelDetails(station) {
             </div>
             <i class="fa-solid fa-route"></i>
         </button>
-
         <button class="route-choice" onclick="startSuggestedRoute(${station.id}, 'alternate')">
             <div>
                 <strong>Alternate route</strong>
@@ -738,16 +479,13 @@ function createTravelDetails(station) {
         </button>
     `;
 }
-
 function getStationRating(id) {
     if (!currentUser) return 0;
     const ratings = JSON.parse(localStorage.getItem("voltmap-station-ratings") || "{}");
     return ratings[`${currentUser.email}:${id}`] || 0;
 }
-
 function createStationRating(station) {
     const rating = getStationRating(station.id);
-
     return `
         <div class="station-rating">
             <span>${rating ? `Your rating: ${rating}/5` : `Community rating: ${station.rating}/5`}</span>
@@ -761,26 +499,20 @@ function createStationRating(station) {
         </div>
     `;
 }
-
 function rateStation(id, rating) {
     if (!currentUser) return;
-
     const ratings = JSON.parse(localStorage.getItem("voltmap-station-ratings") || "{}");
     ratings[`${currentUser.email}:${id}`] = rating;
     localStorage.setItem("voltmap-station-ratings", JSON.stringify(ratings));
-
     syncToBackend(`/stations/${id}/ratings`, {
         method: "POST",
         body: JSON.stringify({ email: currentUser.email, rating })
     });
-
     openStation(id);
     showToast("Station rating saved", `You rated this station ${rating}/5.`);
 }
-
 function createStationContact(station) {
     const contactCode = String(station.id).padStart(3, "0");
-
     return `
         <div class="station-contact">
             <strong style="color:var(--text)">Station admin desk</strong>
@@ -795,41 +527,32 @@ function createStationContact(station) {
         </div>
     `;
 }
-
 /* =========================================================
    BOOKING
    ========================================================= */
-
 function startBooking(id) {
     if (!currentUser) {
         document.getElementById("authOverlay").classList.remove("hidden");
         return;
     }
-
     const station = stations.find(s => s.id === id);
-
     if (!station || station.available === 0) {
         showToast("Unavailable", "No charger is currently available.");
         return;
     }
-
     selectedStation = station;
     selectedCharger = null;
     bookingDraft = {};
     bookingStep = 1;
-
     renderBooking();
     bookingModal.classList.add("open");
 }
-
 /* =========================================================
    BOOKING UI
    ========================================================= */
-
 function renderBooking() {
     const content = document.getElementById("bookingContent");
     updateBookingProgress();
-
     if (bookingStep === 1) {
         content.innerHTML = `
             <h2 class="booking-title">Choose your charger</h2>
@@ -879,7 +602,6 @@ function renderBooking() {
     } else {
         const date = bookingDraft.date || getToday();
         const time = bookingDraft.time || "19:30";
-
         content.innerHTML = `
             <h2 class="booking-title">Review booking</h2>
             <p class="booking-subtitle">Check your details before confirming.</p>
@@ -900,29 +622,22 @@ function renderBooking() {
             </button>
         `;
     }
-
     bindBookingStepEvents();
 }
-
 function bindBookingStepEvents() {
     const content = document.getElementById("bookingContent");
-
     content.querySelectorAll(".booking-charger").forEach(button => {
         button.addEventListener("click", () => selectCharger(button, Number(button.dataset.charger)));
     });
-
     content.querySelector(".booking-next")?.addEventListener("click", bookingNext);
     content.querySelector(".open-payment")?.addEventListener("click", openPayment);
 }
-
 /* =========================================================
    BOOKING CHARGERS
    ========================================================= */
-
 function createBookingChargers() {
     const count = Math.min(selectedStation.available, 4);
     let html = "";
-
     for (let i = 1; i <= count; i++) {
         html += `
             <button type="button" class="booking-charger" data-charger="${i}">
@@ -931,80 +646,63 @@ function createBookingChargers() {
             </button>
         `;
     }
-
     return html;
 }
-
 function selectCharger(button, number) {
     document.querySelectorAll(".charger-choice button").forEach(btn => btn.classList.remove("selected"));
     button.classList.add("selected");
-
     selectedCharger = {
         name: `Charger ${number}`,
         connector: selectedStation.connector,
         power: selectedStation.power
     };
 }
-
 /* =========================================================
    BOOKING NEXT
    ========================================================= */
-
 function bookingNext() {
     if (bookingStep === 1 && !selectedCharger) {
         showToast("Select charger", "Please select an available charger.");
         return;
     }
-
     if (bookingStep === 2) {
         const date = document.getElementById("bookingDate");
         const time = document.getElementById("bookingTime");
-
         if (!date?.value || !time?.value) {
             showToast("Missing information", "Select date and time.");
             return;
         }
-
         bookingDraft.date = date.value;
         bookingDraft.time = time.value;
     }
-
     if (bookingStep === 3) {
         const vehicle = document.getElementById("vehicleSelect");
         const vehicleNumber = document.getElementById("vehicleNumber");
-
         if (!vehicle || !vehicleNumber?.value.trim()) {
             showToast("Vehicle number required", "Enter your vehicle number to continue.");
             return;
         }
-
         bookingDraft.vehicle = vehicle.value;
         bookingDraft.vehicleNumber = vehicleNumber.value.trim().toUpperCase();
     }
-
     bookingStep++;
     renderBooking();
 }
-
 /* =========================================================
    PAYMENT MODAL
    ========================================================= */
-
 function ensurePaymentModal() {
     let modal = document.getElementById("paymentModal");
     if (modal) return modal;
-
     modal = document.createElement("div");
     modal.id = "paymentModal";
-    modal.className = "modal-overlay"; modal.style.zIndex = "100000";
-
+    modal.className = "modal-overlay";
     modal.innerHTML = `
         <div class="modal payment-modal" style="position:relative;">
             <button class="modal-close" id="paymentCloseBtn" type="button"
                 style="position:absolute;top:17px;right:17px;z-index:5;">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-
             <div class="booking-progress">
                 <div class="progress-step complete"><span>1</span>Details</div>
                 <div class="progress-line complete"></div>
@@ -1014,79 +712,61 @@ function ensurePaymentModal() {
                 <div class="progress-line"></div>
                 <div class="progress-step"><span>4</span>Confirm</div>
             </div>
-
             <div id="paymentContent"></div>
         </div>
     `;
-
     document.body.appendChild(modal);
-
     modal.addEventListener("click", event => {
         if (event.target === modal) modal.classList.remove("open");
     });
-
     document.getElementById("paymentCloseBtn")?.addEventListener("click", () => {
         modal.classList.remove("open");
         bookingModal.classList.add("open");
     });
-
     return modal;
 }
-
 /* =========================================================
    PAYMENT
    ========================================================= */
-
 function openPayment() {
     if (!bookingDraft.vehicleNumber) {
         showToast("Vehicle number required", "Enter your vehicle number before payment.");
         return;
     }
-
     ensurePaymentModal();
     bookingModal.classList.remove("open");
     renderPayment();
     document.getElementById("paymentModal").classList.add("open");
 }
-
 /* =========================================================
    UPDATE BOOKING PROGRESS
    ========================================================= */
-
 function updateBookingProgress() {
     document.querySelectorAll(".booking-progress .progress-step").forEach((step, index) => {
         const stepNumber = index + 1;
         step.classList.toggle("active", stepNumber === bookingStep);
         step.classList.toggle("complete", stepNumber < bookingStep);
     });
-
     document.querySelectorAll(".booking-progress .progress-line").forEach((line, index) => {
         line.classList.toggle("complete", index + 1 < bookingStep);
     });
 }
-
 /* =========================================================
    PAYMENT RENDER
    ========================================================= */
-
 function renderPayment() {
     if (!selectedStation) return;
-
     const amount = Math.round(18.4 * selectedStation.price);
     currentPaymentAmount = amount;
-
     const paymentModal = ensurePaymentModal();
     const paymentContent = paymentModal.querySelector("#paymentContent");
-
     if (!paymentContent) {
         console.error("Payment content element not found.");
         return;
     }
-
     paymentContent.innerHTML = `
         <h2 class="booking-title">Complete payment</h2>
         <p class="booking-subtitle">Choose your preferred payment method.</p>
-
         <div class="payment-total" style="display:flex;justify-content:space-between;gap:15px;align-items:center;
             padding:15px;margin-bottom:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;">
             <span>
@@ -1098,7 +778,6 @@ function renderPayment() {
             </span>
             <strong style="font-size:20px;">₹${amount}</strong>
         </div>
-
         <div class="payment-methods">
             <button type="button" class="payment-method ${selectedPaymentMethod === "qr" ? "active" : ""}" data-payment-method="qr">
                 <i class="fa-solid fa-qrcode"></i> QR / UPI
@@ -1113,45 +792,35 @@ function renderPayment() {
                 <i class="fa-solid fa-wallet"></i> Razorpay
             </button>
         </div>
-
         <div class="payment-method-content" style="margin-top:18px;">
             ${createPaymentMethodContent(amount)}
         </div>
-
         <p class="payment-note">
             Demo payment is available immediately.
             Razorpay requires the backend payment routes and Razorpay credentials.
         </p>
-
         <button type="button" class="btn-primary full-btn" id="payButton">
             ${selectedPaymentMethod === "razorpay"
                 ? `<i class="fa-solid fa-credit-card"></i> Pay ₹${amount} with Razorpay`
                 : `<i class="fa-solid fa-lock"></i> Pay ₹${amount} & reserve`}
         </button>
-
         <button type="button" class="btn-secondary full-btn" id="backToBookingPayment" style="margin-top:10px;">
             <i class="fa-solid fa-arrow-left"></i> Back to booking
         </button>
     `;
-
     paymentContent.querySelectorAll("[data-payment-method]").forEach(button => {
         button.addEventListener("click", () => selectPaymentMethod(button.dataset.paymentMethod));
     });
-
     paymentContent.querySelector("#payButton")?.addEventListener("click", processPayment);
-
     paymentContent.querySelector("#backToBookingPayment")?.addEventListener("click", () => {
         document.getElementById("paymentModal")?.classList.remove("open");
         bookingModal.classList.add("open");
     });
 }
-
 /* =========================================================
    PAYMENT METHOD CONTENT
    ========================================================= */
-
 function createPaymentMethodContent(amount) {
-
     if (selectedPaymentMethod === "card") {
         return `
             <div class="payment-form" style="display:grid;gap:12px;">
@@ -1172,7 +841,6 @@ function createPaymentMethodContent(amount) {
             </div>
         `;
     }
-
     if (selectedPaymentMethod === "upi") {
         return `
             <div class="payment-form" style="display:grid;gap:12px;">
@@ -1185,7 +853,6 @@ function createPaymentMethodContent(amount) {
             </div>
         `;
     }
-
     if (selectedPaymentMethod === "razorpay") {
         return `
             <div style="padding:20px;text-align:center;background:var(--card);border:1px solid var(--border);border-radius:12px;">
@@ -1200,7 +867,6 @@ function createPaymentMethodContent(amount) {
             </div>
         `;
     }
-
     // QR / UPI default — real scannable QR image, not a placeholder graphic.
     return `
         <div class="qr-payment" style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;
@@ -1221,41 +887,33 @@ function createPaymentMethodContent(amount) {
         </div>
     `;
 }
-
 /* =========================================================
    SELECT PAYMENT METHOD
    ========================================================= */
-
 function selectPaymentMethod(method) {
     selectedPaymentMethod = method;
     renderPayment();
 }
-
 /* =========================================================
    PROCESS PAYMENT
    ========================================================= */
-
 async function processPayment() {
     if (!selectedStation) {
         showToast("Booking error", "Please select a charging station.");
         return;
     }
-
     if (!currentUser?.email) {
         showToast("Sign in required", "Please sign in before making a payment.");
         document.getElementById("paymentModal")?.classList.remove("open");
         document.getElementById("authOverlay")?.classList.remove("hidden");
         return;
     }
-
     if (selectedPaymentMethod === "razorpay") {
         await processRazorpayPayment();
         return;
     }
-
     if (selectedPaymentMethod === "upi") {
         const upi = document.getElementById("upiId")?.value.trim();
-
         if (!upi) {
             showToast("UPI ID required", "Enter your UPI ID to continue.");
             return;
@@ -1265,13 +923,11 @@ async function processPayment() {
             return;
         }
     }
-
     if (selectedPaymentMethod === "card") {
         const card = document.getElementById("cardNumber")?.value.replace(/\s/g, "");
         const name = document.getElementById("cardName")?.value.trim();
         const expiry = document.getElementById("cardExpiry")?.value.trim();
         const cvv = document.getElementById("cardCvv")?.value.trim();
-
         if (!card || card.length < 12 || !name || !expiry || !cvv) {
             showToast("Card details required", "Enter the complete card details.");
             return;
@@ -1281,21 +937,16 @@ async function processPayment() {
             return;
         }
     }
-
     const payButton = document.getElementById("payButton");
-
     if (payButton) {
         payButton.disabled = true;
         payButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing payment...`;
     }
-
     try {
         // DEMO PAYMENT — confirms QR / UPI / Card in the UI without moving real money.
         await delay(900);
-
         const bookingId = generateUniqueBookingId();
         const amount = Math.round(18.4 * selectedStation.price);
-
         const order = {
             id: bookingId,
             bookingId: bookingId,
@@ -1318,18 +969,15 @@ async function processPayment() {
             rating: null,
             createdAt: new Date().toISOString()
         };
-
         // Save locally first so My Orders works even if the backend is unavailable.
         const orders = JSON.parse(localStorage.getItem("voltmap-orders") || "[]");
         orders.unshift(order);
         localStorage.setItem("voltmap-orders", JSON.stringify(orders));
-
         try {
             await apiRequest("/orders", { method: "POST", body: JSON.stringify(order) });
         } catch (backendOrderError) {
             console.warn("Backend order save failed. Local order was retained.", backendOrderError);
         }
-
         try {
             const bookingResponse = await apiRequest("/bookings", {
                 method: "POST",
@@ -1346,7 +994,6 @@ async function processPayment() {
                     bookingId: bookingId
                 })
             });
-
             if (bookingResponse?.data) {
                 const backendBooking = bookingResponse.data;
                 order.id = backendBooking.id || bookingId;
@@ -1355,81 +1002,62 @@ async function processPayment() {
         } catch (bookingError) {
             console.warn("Backend booking endpoint was not available. Local booking retained.", bookingError);
         }
-
         selectedStation.available = Math.max(0, selectedStation.available - 1);
         filteredStations = filteredStations.map(s => (s.id === selectedStation.id ? selectedStation : s));
-
         renderStations();
         document.getElementById("paymentModal")?.classList.remove("open");
         showPaymentSuccess(order);
-
     } catch (error) {
         console.error("Payment error:", error);
-
         if (payButton) {
             payButton.disabled = false;
             payButton.innerHTML = `<i class="fa-solid fa-lock"></i> Pay ₹${currentPaymentAmount} & reserve`;
         }
-
         showToast("Payment failed", error.message || "Please try again.");
     }
 }
-
 /* =========================================================
    RAZORPAY
    ========================================================= */
-
 function loadRazorpayScript() {
     return new Promise((resolve, reject) => {
         if (window.Razorpay) {
             resolve(window.Razorpay);
             return;
         }
-
         const existing = document.querySelector('script[data-razorpay-sdk="true"]');
-
         if (existing) {
             existing.addEventListener("load", () => resolve(window.Razorpay));
             existing.addEventListener("error", reject);
             return;
         }
-
         const script = document.createElement("script");
         script.src = "https://checkout.razorpay.com/v1/checkout.js";
         script.async = true;
         script.dataset.razorpaySdk = "true";
         script.onload = () => resolve(window.Razorpay);
         script.onerror = () => reject(new Error("Razorpay checkout could not be loaded."));
-
         document.head.appendChild(script);
     });
 }
-
 async function processRazorpayPayment() {
     if (!selectedStation) return;
-
     const amount = Math.round(18.4 * selectedStation.price);
     const payButton = document.getElementById("payButton");
-
     if (payButton) {
         payButton.disabled = true;
         payButton.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Opening Razorpay...`;
     }
-
     try {
         const Razorpay = await loadRazorpayScript();
-
         const response = await apiRequest("/payment/create-order", {
             method: "POST",
             body: JSON.stringify({ amount: amount, currency: "INR", receipt: generateUniqueBookingId() })
         });
-
         if (!response?.success || !response?.data) {
             throw new Error(response?.message || "Unable to create Razorpay order.");
         }
-
         const razorpayOrder = response.data;
-
         const options = {
             key: razorpayOrder.keyId || response.keyId || "",
             amount: razorpayOrder.amount || amount * 100,
@@ -1452,24 +1080,18 @@ async function processRazorpayPayment() {
                 }
             }
         };
-
         if (!options.key) throw new Error("Razorpay key was not returned by the backend.");
-
         const checkout = new Razorpay(options);
         checkout.open();
-
     } catch (error) {
         console.error("Razorpay error:", error);
-
         if (payButton) {
             payButton.disabled = false;
             payButton.innerHTML = `<i class="fa-solid fa-credit-card"></i> Pay ₹${amount} with Razorpay`;
         }
-
         showToast("Razorpay unavailable", error.message || "Start the updated backend and configure Razorpay credentials.");
     }
 }
-
 async function verifyRazorpayPayment(paymentResponse, amount) {
     try {
         const verification = await apiRequest("/payment/verify", {
@@ -1488,14 +1110,11 @@ async function verifyRazorpayPayment(paymentResponse, amount) {
                 durationMinutes: 60
             })
         });
-
         if (!verification?.success) {
             throw new Error(verification?.message || "Payment verification failed.");
         }
-
         const serverOrder = verification.data || {};
         const bookingId = serverOrder.bookingId || serverOrder.id || generateUniqueBookingId();
-
         const order = {
             id: bookingId,
             bookingId: bookingId,
@@ -1518,49 +1137,39 @@ async function verifyRazorpayPayment(paymentResponse, amount) {
             createdAt: new Date().toISOString(),
             rating: null
         };
-
         const orders = JSON.parse(localStorage.getItem("voltmap-orders") || "[]");
         orders.unshift(order);
         localStorage.setItem("voltmap-orders", JSON.stringify(orders));
-
         selectedStation.available = Math.max(0, selectedStation.available - 1);
         renderStations();
-
         document.getElementById("paymentModal")?.classList.remove("open");
         showPaymentSuccess(order);
-
     } catch (error) {
         console.error("Razorpay verification error:", error);
         showToast("Payment verification failed", error.message || "Do not close the page. Contact support if money was deducted.");
     }
 }
-
 /* =========================================================
    PAYMENT SUCCESS
    ========================================================= */
-
 function showPaymentSuccess(order) {
     const modal = document.createElement("div");
     modal.className = "modal-overlay open";
     modal.dataset.paymentSuccess = "true";
-
     modal.innerHTML = `
         <div class="modal" style="text-align:center;position:relative;">
             <button type="button" class="modal-close" data-success-close style="position:absolute;top:17px;right:17px;">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-
             <div style="width:72px;height:72px;margin:8px auto 18px;display:grid;place-items:center;
                 border-radius:50%;background:var(--green-soft);color:var(--green);font-size:30px;">
                 <i class="fa-solid fa-check"></i>
             </div>
-
             <span class="modal-eyebrow">PAYMENT SUCCESSFUL</span>
             <h2 style="font-family:var(--font-display);margin:8px 0;">Booking confirmed!</h2>
             <p style="color:var(--muted);font-size:11px;line-height:1.7;">
                 Your charging slot has been reserved successfully.
             </p>
-
             <div style="margin-top:18px;padding:17px;border:1px solid var(--border);background:var(--card);border-radius:12px;">
                 <span style="display:block;color:var(--muted);font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;">
                     BOOKING ID
@@ -1572,7 +1181,6 @@ function showPaymentSuccess(order) {
                     <i class="fa-regular fa-copy"></i> Copy Booking ID
                 </button>
             </div>
-
             <div class="booking-summary" style="text-align:left;margin-top:18px;">
                 <div class="summary-line"><span>Station</span><strong>${escapeHtmlSafe(order.stationName)}</strong></div>
                 <div class="summary-line"><span>Charger</span><strong>${escapeHtmlSafe(order.chargerName)}</strong></div>
@@ -1581,7 +1189,6 @@ function showPaymentSuccess(order) {
                 <div class="summary-line"><span>Vehicle</span><strong>${escapeHtmlSafe(order.vehicleNumber)}</strong></div>
                 <div class="summary-line summary-total"><span>Paid</span><strong>₹${order.amount}</strong></div>
             </div>
-
             <div style="display:grid;gap:9px;margin-top:18px;">
                 <button type="button" class="btn-primary full-btn" data-view-orders>
                     <i class="fa-regular fa-calendar-check"></i> View My Orders
@@ -1590,13 +1197,10 @@ function showPaymentSuccess(order) {
             </div>
         </div>
     `;
-
     document.body.appendChild(modal);
-
     modal.querySelectorAll("[data-success-close]").forEach(button => {
         button.addEventListener("click", () => modal.remove());
     });
-
     modal.querySelector("[data-copy-booking]")?.addEventListener("click", async () => {
         const id = order.bookingId || order.id;
         try {
@@ -1606,73 +1210,57 @@ function showPaymentSuccess(order) {
             showToast("Booking ID", id);
         }
     });
-
     modal.querySelector("[data-view-orders]")?.addEventListener("click", () => {
         modal.remove();
         openOrders();
     });
-
     modal.addEventListener("click", event => {
         if (event.target === modal) modal.remove();
     });
-
     showToast("Payment successful", `Booking ID: ${order.bookingId || order.id}`);
 }
-
 /* =========================================================
    UNIQUE BOOKING ID
    ========================================================= */
-
 function generateUniqueBookingId() {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 7).toUpperCase();
     return `VM-${timestamp}-${random}`;
 }
-
 /* =========================================================
    SAFE HTML
    ========================================================= */
-
 function escapeHtmlSafe(value) {
     const div = document.createElement("div");
     div.textContent = value == null ? "" : String(value);
     return div.innerHTML;
 }
-
 /* =========================================================
    SEARCH
    ========================================================= */
-
 searchInput.addEventListener("input", debounce(() => applySearch(), 250));
-
 function applySearch() {
     const query = searchInput.value.trim().toLowerCase();
-
     filteredStations = stations.filter(station =>
         station.name.toLowerCase().includes(query) ||
         station.address.toLowerCase().includes(query) ||
         station.operator.toLowerCase().includes(query) ||
         station.connector.toLowerCase().includes(query)
     );
-
     renderStations();
     renderSearchSuggestions(query);
 }
-
 function renderSearchSuggestions(query) {
     const suggestionBox = document.getElementById("searchSuggestions");
-
     if (!query) {
         suggestionBox.classList.remove("open");
         suggestionBox.innerHTML = "";
         return;
     }
-
     const matches = stations.filter(station =>
         [station.name, station.address, station.operator, station.connector]
             .some(value => value.toLowerCase().includes(query))
     ).slice(0, 5);
-
     if (!matches.length) {
         suggestionBox.innerHTML = `
             <div class="suggestion-item">
@@ -1694,29 +1282,22 @@ function renderSearchSuggestions(query) {
             </button>
         `).join("");
     }
-
     suggestionBox.classList.add("open");
 }
-
 function selectSearchSuggestion(id) {
     const station = stations.find(item => item.id === id);
     if (!station) return;
-
     searchInput.value = station.name;
     filteredStations = [station];
-
     document.getElementById("searchSuggestions").classList.remove("open");
     renderStations();
     openStation(id);
 }
-
 /* =========================================================
    SORTING
    ========================================================= */
-
 document.getElementById("sortSelect").addEventListener("change", e => {
     const type = e.target.value;
-
     if (type === "distance") filteredStations.sort((a, b) => a.distance - b.distance);
     else if (type === "price-low") filteredStations.sort((a, b) => a.price - b.price);
     else if (type === "price-high") filteredStations.sort((a, b) => b.price - a.price);
@@ -1724,52 +1305,40 @@ document.getElementById("sortSelect").addEventListener("change", e => {
     else if (type === "rating") filteredStations.sort((a, b) => b.rating - a.rating);
     else if (type === "availability") filteredStations.sort((a, b) => b.available - a.available);
     else filteredStations.sort((a, b) => recommendationScore(b) - recommendationScore(a));
-
     renderStations();
 });
-
 function recommendationScore(station) {
     const availability = station.available / station.total;
     const distanceScore = 1 / Math.max(station.distance, 1);
     const speedScore = Math.min(station.power / 150, 1);
     const priceScore = 1 / station.price;
-
     return availability * 5 + distanceScore * 2 + speedScore * 2 + station.rating + priceScore * 2;
 }
-
 /* =========================================================
    QUICK FILTERS
    ========================================================= */
-
 document.querySelectorAll(".quick-filter").forEach(button => {
     button.addEventListener("click", () => {
         document.querySelectorAll(".quick-filter").forEach(btn => btn.classList.remove("active"));
         button.classList.add("active");
-
         const filter = button.dataset.filter;
-
         if (filter === "available") filteredStations = stations.filter(s => s.available > 0);
         else if (filter === "fast") filteredStations = stations.filter(s => s.power >= 100);
         else if (filter === "cheap") filteredStations = stations.filter(s => s.price <= 18);
         else filteredStations = [...stations];
-
         renderStations();
     });
 });
-
 /* =========================================================
    ADVANCED FILTER
    ========================================================= */
-
 document.getElementById("filterBtn").addEventListener("click", () => filterModal.classList.add("open"));
 document.getElementById("applyFilters").addEventListener("click", applyAdvancedFilters);
-
 function applyAdvancedFilters() {
     const connector = document.getElementById("connectorFilter").value;
     const maxPrice = Number(document.getElementById("priceRange").value);
     const minSpeed = Number(document.getElementById("speedFilter").value);
     const availableOnly = document.getElementById("availableFilter").checked;
-
     filteredStations = stations.filter(station => {
         if (selectedChargerType !== "all" && station.chargerType !== selectedChargerType) return false;
         if (connector !== "all" && station.connector !== connector) return false;
@@ -1778,17 +1347,13 @@ function applyAdvancedFilters() {
         if (availableOnly && station.available === 0) return false;
         return true;
     });
-
     filterModal.classList.remove("open");
     renderStations();
-
     showToast("Filters applied", `${filteredStations.length} stations found.`);
 }
-
 /* =========================================================
    CHARGER TYPE BUTTONS
    ========================================================= */
-
 document.querySelectorAll(".option-btn[data-type='charger']").forEach(button => {
     button.addEventListener("click", () => {
         document.querySelectorAll(".option-btn[data-type='charger']").forEach(btn => btn.classList.remove("active"));
@@ -1796,223 +1361,167 @@ document.querySelectorAll(".option-btn[data-type='charger']").forEach(button => 
         selectedChargerType = button.dataset.value;
     });
 });
-
 /* =========================================================
    PRICE SLIDER
    ========================================================= */
-
 document.getElementById("priceRange").addEventListener("input", e => {
     document.getElementById("priceValue").textContent = e.target.value;
 });
-
 /* =========================================================
    CLEAR FILTERS
    ========================================================= */
-
 document.getElementById("clearFilters").addEventListener("click", resetFilters);
-
 function resetFilters() {
     selectedChargerType = "all";
-
     document.getElementById("connectorFilter").value = "all";
     document.getElementById("priceRange").value = 25;
     document.getElementById("priceValue").textContent = 25;
     document.getElementById("speedFilter").value = 0;
     document.getElementById("availableFilter").checked = false;
-
     document.querySelectorAll(".option-btn[data-type='charger']").forEach(btn => btn.classList.remove("active"));
     document.querySelector(".option-btn[data-value='all']").classList.add("active");
-
     filteredStations = [...stations];
     filterModal.classList.remove("open");
     renderStations();
 }
-
 /* =========================================================
    FAVORITES
    ========================================================= */
-
 function toggleFavorite(id) {
     const station = stations.find(s => s.id === id);
     if (!station) return;
-
     station.favorite = !station.favorite;
     persistFavorites();
     renderStations();
-
     showToast(station.favorite ? "Added to favorites" : "Removed from favorites", station.name);
 }
-
 /* =========================================================
    GEOLOCATION
    ========================================================= */
-
 function locateUser() {
     if (!navigator.geolocation) {
         showToast("Not supported", "Geolocation is not supported by this browser.");
         return;
     }
-
     navigator.geolocation.getCurrentPosition(
         position => {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
-
             userLocation = { lat, lng };
-
             map.setView([lat, lng], 14, { animate: true });
-
             L.circleMarker([lat, lng], { radius: 8, color: "#ffffff", weight: 3, fillColor: "#5b9cff", fillOpacity: 1 })
                 .addTo(map)
                 .bindPopup("You are here");
-
             showToast("Location found", "Showing charging stations near you.");
         },
         () => showToast("Location unavailable", "Please allow location access.")
     );
 }
-
 document.getElementById("locationBtn").addEventListener("click", locateUser);
 document.getElementById("mapLocationBtn").addEventListener("click", locateUser);
-
 /* =========================================================
    DIRECTIONS
    ========================================================= */
-
 function getDirections(id) {
     const station = stations.find(s => s.id === id);
     if (!station) return;
-
     const url = `https://www.google.com/maps/dir/?api=1` +
         `${userLocation ? `&origin=${userLocation.lat},${userLocation.lng}` : ""}` +
         `&destination=${station.lat},${station.lng}`;
-
     window.open(url, "_blank");
 }
-
 /* =========================================================
    DRAWER
    ========================================================= */
-
 document.getElementById("drawerClose").addEventListener("click", closeDrawer);
 drawerOverlay.addEventListener("click", closeDrawer);
-
 function closeDrawer() {
     stationDrawer.classList.remove("open");
     drawerOverlay.classList.remove("open");
 }
-
 /* =========================================================
    MODAL CLOSE
    ========================================================= */
-
 document.querySelectorAll("[data-close]").forEach(button => {
     button.addEventListener("click", () => {
         document.getElementById(button.dataset.close).classList.remove("open");
     });
 });
-
 document.querySelectorAll(".modal-overlay").forEach(modal => {
     modal.addEventListener("click", e => {
         if (e.target === modal) modal.classList.remove("open");
     });
 });
-
 /* =========================================================
    NOTIFICATIONS
    ========================================================= */
-
 document.getElementById("notificationBtn").addEventListener("click", () => {
     notificationPanel.classList.toggle("open");
 });
-
 document.getElementById("markRead").addEventListener("click", () => {
     document.querySelector(".notifications").replaceChildren();
     document.querySelector(".notification-count").textContent = "0";
     notificationPanel.classList.remove("open");
     showToast("Notifications cleared", "All notifications have been removed.");
 });
-
 /* =========================================================
    THEME
    ========================================================= */
-
 document.getElementById("themeBtn").addEventListener("click", toggleTheme);
-
 function toggleTheme() {
     document.body.classList.toggle("light");
     const light = document.body.classList.contains("light");
-
     localStorage.setItem("voltmap-theme", light ? "light" : "dark");
     document.querySelector("#themeBtn i").className = light ? "fa-solid fa-moon" : "fa-solid fa-sun";
-
     updateMapTheme();
     renderMarkers();
 }
-
 function initializeTheme() {
     const theme = localStorage.getItem("voltmap-theme");
-
     if (theme === "light") {
         document.body.classList.add("light");
         document.querySelector("#themeBtn i").className = "fa-solid fa-moon";
     }
-
     updateMapTheme();
 }
-
 function startSuggestedRoute(id, routeType) {
     const station = stations.find(item => item.id === id);
     if (!station) return;
-
     showToast(
         routeType === "best" ? "Opening best route" : "Opening alternate routes",
         "Google Maps will use current traffic to choose the best driving route."
     );
-
     getDirections(id);
 }
-
 /* =========================================================
    SAVED MAP PLACES
    ========================================================= */
-
 function getSavedPlaces() {
     return JSON.parse(localStorage.getItem("voltmap-saved-places") || "{}");
 }
-
 function saveMapCenter(place) {
     if (!map) return;
-
     const center = map.getCenter();
     const places = getSavedPlaces();
-
     places[place] = { lat: center.lat, lng: center.lng };
     localStorage.setItem("voltmap-saved-places", JSON.stringify(places));
-
     if (currentUser) {
         syncToBackend(`/users/${encodeURIComponent(currentUser.email)}/saved-places`, {
             method: "PUT",
             body: JSON.stringify({ place, lat: center.lat, lng: center.lng })
         });
     }
-
     renderSavedPlaces();
     showToast(`${place[0].toUpperCase() + place.slice(1)} saved`, "The current map centre was marked for quick access.");
 }
-
 function renderSavedPlaces() {
     if (!map) return;
-
     Object.values(savedPlaceMarkers).forEach(marker => map.removeLayer(marker));
     savedPlaceMarkers = {};
-
     const icons = { home: "fa-house", office: "fa-briefcase", college: "fa-graduation-cap" };
     const places = getSavedPlaces();
-
     Object.entries(places).forEach(([type, location]) => {
         const label = type[0].toUpperCase() + type.slice(1);
-
         const marker = L.marker([location.lat, location.lng], {
             icon: L.divIcon({
                 className: "saved-place-marker",
@@ -2026,61 +1535,46 @@ function renderSavedPlaces() {
                 iconAnchor: [15, 15]
             })
         }).addTo(map).bindPopup(`<strong>${label}</strong><br><small>Saved place</small>`);
-
         savedPlaceMarkers[type] = marker;
     });
 }
-
 /* =========================================================
    FULLSCREEN
    ========================================================= */
-
 document.getElementById("fullscreenBtn").addEventListener("click", () => {
     const mapElement = document.getElementById("map");
-
     if (!document.fullscreenElement) mapElement.requestFullscreen?.();
     else document.exitFullscreen?.();
 });
-
 /* =========================================================
    COST CALCULATOR
    ========================================================= */
-
 function openCalculator() {
     document.getElementById("calculatorModal").classList.add("open");
 }
-
 document.getElementById("calculateBtn").addEventListener("click", calculateCost);
-
 function calculateCost() {
     const capacity = Number(document.getElementById("batteryCapacity").value);
     const current = Number(document.getElementById("currentBattery").value);
     const target = Number(document.getElementById("targetBattery").value);
     const price = Number(document.getElementById("chargePrice").value);
-
     if (capacity <= 0 || target <= current) {
         showToast("Invalid values", "Check your battery percentages.");
         return;
     }
-
     const energy = capacity * ((target - current) / 100);
     const cost = energy * price;
     const chargingPower = 100;
     const time = (energy / chargingPower) * 60;
-
     document.getElementById("energyResult").textContent = energy.toFixed(2) + " kWh";
     document.getElementById("costResult").textContent = "₹" + Math.round(cost);
     document.getElementById("timeResult").textContent = Math.max(1, Math.round(time)) + " min";
-
     renderStationComparison(energy, 30);
 }
-
 function renderStationComparison(energy, duration) {
     const container = document.getElementById("stationCompareResult");
     if (!container) return;
-
     const hasDuration = Number.isFinite(duration) && duration > 0;
-
     const ranked = stations
         .filter(station => station.open)
         .map(station => {
@@ -2091,12 +1585,10 @@ function renderStationComparison(energy, duration) {
         })
         .sort((a, b) => a.cost - b.cost)
         .slice(0, 5);
-
     if (!ranked.length) {
         container.innerHTML = `<p class="payment-note">No stations available to compare right now.</p>`;
         return;
     }
-
     container.innerHTML = ranked.map(entry => `
         <div class="compare-station-row">
             <div>
@@ -2113,82 +1605,63 @@ function renderStationComparison(energy, duration) {
         </div>
     `).join("");
 }
-
 /* =========================================================
    LIVE AVAILABILITY
    ========================================================= */
-
 function simulateLiveUpdates() {
     setInterval(() => {
         const station = stations[Math.floor(Math.random() * stations.length)];
         if (!station) return;
-
         const change = Math.random() > 0.5 ? 1 : -1;
         station.available = Math.max(0, Math.min(station.total, station.available + change));
-
         const visible = filteredStations.some(s => s.id === station.id);
         if (visible) renderStations();
     }, 10000);
 }
-
 /* =========================================================
    STATISTICS
    ========================================================= */
-
 function updateStats() {
     stationCount.textContent = filteredStations.length;
     mapStationCount.textContent = filteredStations.length;
 }
-
 /* =========================================================
    HIGHLIGHT CARD
    ========================================================= */
-
 function highlightCard(id) {
     document.querySelectorAll(".station-card").forEach(card => card.classList.remove("selected"));
-
     const card = document.querySelector(`.station-card[data-id="${id}"]`);
     if (card) {
         card.classList.add("selected");
         card.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 }
-
 /* =========================================================
    TOAST
    ========================================================= */
-
 let toastTimeout;
-
 function showToast(title, message) {
     document.getElementById("toastTitle").textContent = title;
     document.getElementById("toastMessage").textContent = message;
-
     toast.classList.add("show");
     clearTimeout(toastTimeout);
     toastTimeout = setTimeout(() => toast.classList.remove("show"), 3500);
 }
-
 /* =========================================================
    DATE
    ========================================================= */
-
 function getToday() {
     return new Date().toISOString().split("T")[0];
 }
-
 /* =========================================================
    CALENDAR
    ========================================================= */
-
 function addToCalendar() {
     showToast("Calendar", "Booking added to your calendar.");
 }
-
 /* =========================================================
    DEBOUNCE
    ========================================================= */
-
 function debounce(callback, delay) {
     let timeout;
     return (...args) => {
@@ -2196,42 +1669,197 @@ function debounce(callback, delay) {
         timeout = setTimeout(() => callback(...args), delay);
     };
 }
-
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
-
+/* =========================================================
+   GOOGLE MAPS-STYLE DRAGGABLE BOTTOM SHEET (mobile only)
+   ---------------------------------------------------------
+   Wraps the existing .sidebar element on mobile (<=800px) with
+   drag-to-resize behaviour, snapping between three states:
+     collapsed -> just the handle + header peeking over the map
+     half      -> the original default height (~37vh), unchanged
+     full      -> ~90% of the available height, like Google Maps
+   Desktop layout, colors, markers and all other UI are untouched:
+   this only adds a transform to .sidebar and only while the mobile
+   media query is active. If JS fails to load, .sidebar simply keeps
+   its default CSS position (same as before this feature existed).
+   ========================================================= */
+const SHEET_BREAKPOINT = 800;
+// Fractions are translateY as a percentage of the sheet's own CSS
+// height. Since the sheet's CSS height now spans almost the entire
+// app content area (see style.css), these map directly onto "% of
+// screen visible" the way Google Maps describes its sheet states:
+//   collapsed -> 10% visible (small peek: just the handle + header)
+//   half      -> 40% visible (medium — a handful of stations)
+//   full      -> 90% visible (almost full screen)
+// translateY fraction = 1 - visibleFraction.
+const SHEET_SNAP_FRACTIONS = {
+    full: 0.10,       // 90% of the screen visible — Google Maps "expanded" feel
+    half: 0.60,       // 40% visible — medium state
+    collapsed: 0.90   // 10% visible — small peek, just the handle + header
+};
+const sheetDrag = {
+    active: false,
+    pointerId: null,
+    startY: 0,
+    startTranslatePx: 0,
+    sheetHeightPx: 0,
+    currentState: "half"
+};
+function isMobileSheetActive() {
+    return window.innerWidth <= SHEET_BREAKPOINT;
+}
+function getSheetSnapPx(sheetEl) {
+    const height = sheetEl.offsetHeight;
+    return {
+        full: height * SHEET_SNAP_FRACTIONS.full,
+        half: height * SHEET_SNAP_FRACTIONS.half,
+        collapsed: height * SHEET_SNAP_FRACTIONS.collapsed
+    };
+}
+function readCurrentTranslateY(sheetEl) {
+    const style = window.getComputedStyle(sheetEl);
+    const transform = style.transform;
+    if (!transform || transform === "none") return 0;
+    // matrix(a, b, c, d, tx, ty) — translateY is ty, the 6th value.
+    const match = transform.match(/matrix\(([^)]+)\)/);
+    if (!match) return 0;
+    const parts = match[1].split(",").map(Number);
+    return parts.length >= 6 ? parts[5] : 0;
+}
+function setSheetTranslate(sheetEl, px, animate) {
+    sheetEl.style.transition = animate
+        ? "transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1)"
+        : "none";
+    sheetEl.style.transform = `translateY(${px}px)`;
+}
+function snapSheetTo(state) {
+    const sheetEl = document.querySelector(".sidebar");
+    if (!sheetEl || !isMobileSheetActive()) return;
+    const snaps = getSheetSnapPx(sheetEl);
+    const target = snaps[state] ?? snaps.half;
+    sheetDrag.currentState = state;
+    sheetEl.dataset.sheetState = state;
+    setSheetTranslate(sheetEl, target, true);
+}
+function clampSheetTranslate(px, snaps) {
+    const min = snaps.full - 24;      // small overscroll allowance at the top
+    const max = snaps.collapsed + 24; // small overscroll allowance at the bottom
+    return Math.min(max, Math.max(min, px));
+}
+function initBottomSheet() {
+    const sheetEl = document.querySelector(".sidebar");
+    const handleEl = document.getElementById("sheetHandle");
+    if (!sheetEl || !handleEl) return;
+    function onDragStart(event) {
+        if (!isMobileSheetActive()) return;
+        const point = event.touches ? event.touches[0] : event;
+        sheetDrag.active = true;
+        sheetDrag.startY = point.clientY;
+        sheetDrag.startTranslatePx = readCurrentTranslateY(sheetEl);
+        sheetDrag.sheetHeightPx = sheetEl.offsetHeight;
+        sheetEl.style.transition = "none";
+        document.addEventListener("touchmove", onDragMove, { passive: false });
+        document.addEventListener("touchend", onDragEnd);
+        document.addEventListener("touchcancel", onDragEnd);
+        document.addEventListener("mousemove", onDragMove);
+        document.addEventListener("mouseup", onDragEnd);
+    }
+    function onDragMove(event) {
+        if (!sheetDrag.active) return;
+        // Prevent the page/map from scrolling underneath while dragging the handle.
+        if (event.cancelable) event.preventDefault();
+        const point = event.touches ? event.touches[0] : event;
+        const deltaY = point.clientY - sheetDrag.startY;
+        const snaps = {
+            full: sheetDrag.sheetHeightPx * SHEET_SNAP_FRACTIONS.full,
+            half: sheetDrag.sheetHeightPx * SHEET_SNAP_FRACTIONS.half,
+            collapsed: sheetDrag.sheetHeightPx * SHEET_SNAP_FRACTIONS.collapsed
+        };
+        const next = clampSheetTranslate(sheetDrag.startTranslatePx + deltaY, snaps);
+        sheetEl.style.transform = `translateY(${next}px)`;
+    }
+    function onDragEnd() {
+        if (!sheetDrag.active) return;
+        sheetDrag.active = false;
+        document.removeEventListener("touchmove", onDragMove);
+        document.removeEventListener("touchend", onDragEnd);
+        document.removeEventListener("touchcancel", onDragEnd);
+        document.removeEventListener("mousemove", onDragMove);
+        document.removeEventListener("mouseup", onDragEnd);
+        const currentPx = readCurrentTranslateY(sheetEl);
+        const snaps = getSheetSnapPx(sheetEl);
+        // Snap to whichever of the three resting states is nearest.
+        let nearestState = "half";
+        let nearestDistance = Infinity;
+        Object.entries(snaps).forEach(([state, px]) => {
+            const distance = Math.abs(px - currentPx);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestState = state;
+            }
+        });
+        snapSheetTo(nearestState);
+    }
+    // Tapping the handle (without dragging) toggles between collapsed and half —
+    // a quick way to peek the map or bring the list back without a full drag gesture.
+    let dragMoved = false;
+    handleEl.addEventListener("touchstart", event => { dragMoved = false; onDragStart(event); }, { passive: true });
+    handleEl.addEventListener("mousedown", event => { dragMoved = false; onDragStart(event); });
+    document.addEventListener("touchmove", () => { dragMoved = true; }, { passive: true });
+    document.addEventListener("mousemove", () => { if (sheetDrag.active) dragMoved = true; });
+    handleEl.addEventListener("click", () => {
+        if (dragMoved) return;
+        snapSheetTo(sheetDrag.currentState === "collapsed" ? "half" : "collapsed");
+    });
+    // Keep the sheet sane across resizes/orientation changes and desktop<->mobile transitions.
+    window.addEventListener("resize", () => {
+        if (isMobileSheetActive()) {
+            snapSheetTo(sheetDrag.currentState || "half");
+        } else {
+            // Leaving mobile width — clear the inline transform so the normal
+            // desktop .sidebar CSS (fixed width column) takes over untouched.
+            sheetEl.style.transform = "";
+            sheetEl.style.transition = "";
+            sheetEl.removeAttribute("data-sheet-state");
+        }
+    });
+    // Initial resting position on load.
+    if (isMobileSheetActive()) {
+        snapSheetTo("half");
+    }
+}
 /* =========================================================
    EVENTS
    ========================================================= */
-
 function setupEvents() {
-
     document.getElementById("clearSearch").addEventListener("click", () => {
         searchInput.value = "";
         document.getElementById("searchSuggestions").classList.remove("open");
         filteredStations = [...stations];
         renderStations();
     });
-
     document.getElementById("profileBtn").addEventListener("click", () => openSettings());
     document.getElementById("ordersBtn").addEventListener("click", openOrders);
     document.getElementById("logoutBtn").addEventListener("click", logout);
-
+    // FIX: this button existed in the Settings modal with no click handler at
+    // all, so tapping "My orders" from the profile section did nothing. It
+    // should close Settings and open the actual My Orders modal.
+    document.getElementById("ordersFromSettingsBtn")?.addEventListener("click", () => {
+        document.getElementById("settingsModal").classList.remove("open");
+        openOrders();
+    });
     document.getElementById("savedPlacesBtn").addEventListener("click", () => {
         document.getElementById("savedPlacesPanel").classList.toggle("open");
     });
-
     document.getElementById("calculatorBtn").addEventListener("click", openCalculator);
-
     document.getElementById("closeSavedPlaces").addEventListener("click", () => {
         document.getElementById("savedPlacesPanel").classList.remove("open");
     });
-
     document.querySelectorAll(".saved-place-actions button").forEach(button => {
         button.addEventListener("click", () => saveMapCenter(button.dataset.place));
     });
-
     // FIX: the bottom mobile nav bar existed in HTML/CSS with no click
     // handlers at all. On phones the desktop profile button is hidden,
     // so there was previously no way to reach Settings/Logout/Orders.
@@ -2239,18 +1867,16 @@ function setupEvents() {
         document.querySelectorAll(".mobile-nav button").forEach(btn => btn.classList.remove("active"));
         document.getElementById(id)?.classList.add("active");
     }
-
     document.getElementById("mobileMapBtn")?.addEventListener("click", () => {
         closeDrawer();
         document.getElementById("savedPlacesPanel").classList.remove("open");
+        snapSheetTo("collapsed");
         setMobileNavActive("mobileMapBtn");
     });
-
     document.getElementById("mobileExplore")?.addEventListener("click", () => {
-        document.querySelector(".sidebar").scrollIntoView({ behavior: "smooth", block: "start" });
+        snapSheetTo("full");
         setMobileNavActive("mobileExplore");
     });
-
     document.getElementById("mobileBookings")?.addEventListener("click", () => {
         if (!currentUser) {
             document.getElementById("authOverlay").classList.remove("hidden");
@@ -2259,13 +1885,12 @@ function setupEvents() {
         openOrders();
         setMobileNavActive("mobileBookings");
     });
-
     document.getElementById("mobileFavorites")?.addEventListener("click", () => {
         filteredStations = stations.filter(s => s.favorite);
         renderStations();
+        snapSheetTo("half");
         setMobileNavActive("mobileFavorites");
     });
-
     document.getElementById("mobileProfile")?.addEventListener("click", () => {
         if (!currentUser) {
             document.getElementById("authOverlay").classList.remove("hidden");
@@ -2275,11 +1900,9 @@ function setupEvents() {
         setMobileNavActive("mobileProfile");
     });
 }
-
 /* =========================================================
    AUTHENTICATION
    ========================================================= */
-
 /* =========================================================
    GOOGLE SIGN-IN
    Loads Google Identity Services on demand and mounts a
@@ -2287,29 +1910,24 @@ function setupEvents() {
    a real GOOGLE_CLIENT_ID (see top of file) with this site's
    origin added under "Authorized JavaScript origins" in the
    Google Cloud Console.
-
    On success this calls POST /auth/google { credential } on
    your backend so the ID token can be verified server-side —
    add that route to your API. If it isn't available yet, this
    falls back to a local demo account keyed by the Google
    email so the button is still testable end to end.
    ========================================================= */
-
 function loadGoogleScript() {
     return new Promise((resolve, reject) => {
         if (window.google?.accounts?.id) {
             resolve(window.google);
             return;
         }
-
         const existing = document.querySelector('script[data-google-sdk="true"]');
-
         if (existing) {
             existing.addEventListener("load", () => resolve(window.google));
             existing.addEventListener("error", reject);
             return;
         }
-
         const script = document.createElement("script");
         script.src = "https://accounts.google.com/gsi/client";
         script.async = true;
@@ -2317,17 +1935,13 @@ function loadGoogleScript() {
         script.dataset.googleSdk = "true";
         script.onload = () => resolve(window.google);
         script.onerror = () => reject(new Error("Google Sign-In could not be loaded."));
-
         document.head.appendChild(script);
     });
 }
-
 function ensureGoogleSignInMount() {
     if (document.getElementById("googleSignInMount")) return;
-
     const authForm = document.getElementById("authForm");
     if (!authForm) return;
-
     authForm.insertAdjacentHTML("afterend", `
         <div style="display:flex;align-items:center;gap:10px;margin:18px 0 12px;color:var(--faint);font-size:9px;letter-spacing:.08em;">
             <span style="flex:1;height:1px;background:var(--border);"></span>
@@ -2337,25 +1951,19 @@ function ensureGoogleSignInMount() {
         <div id="googleSignInMount" style="display:flex;justify-content:center;"></div>
     `);
 }
-
 async function initializeGoogleSignIn() {
     if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith("YOUR_GOOGLE_OAUTH_CLIENT_ID")) {
         console.warn("Google Sign-In: set GOOGLE_CLIENT_ID at the top of script.js to enable it.");
         return;
     }
-
     ensureGoogleSignInMount();
-
     try {
         const google = await loadGoogleScript();
-
         google.accounts.id.initialize({
             client_id: GOOGLE_CLIENT_ID,
             callback: handleGoogleCredential
         });
-
         const mount = document.getElementById("googleSignInMount");
-
         if (mount) {
             google.accounts.id.renderButton(mount, {
                 theme: "filled_black",
@@ -2369,7 +1977,6 @@ async function initializeGoogleSignIn() {
         console.warn("Google Sign-In unavailable:", error);
     }
 }
-
 function decodeGoogleCredential(token) {
     try {
         const payloadBase64 = token.split(".")[1];
@@ -2379,31 +1986,24 @@ function decodeGoogleCredential(token) {
         return null;
     }
 }
-
 async function handleGoogleCredential(response) {
     if (!response?.credential) return;
-
     const payload = decodeGoogleCredential(response.credential);
-
     if (!payload?.email) {
         showToast("Google sign-in failed", "Could not read your Google account details.");
         return;
     }
-
     let account;
-
     try {
         const result = await apiRequest("/auth/google", {
             method: "POST",
             body: JSON.stringify({ credential: response.credential })
         });
         account = result.data;
-
     } catch (backendError) {
         // Demo/offline fallback — create or reuse a local driver account tied to the Google email.
         const accounts = JSON.parse(localStorage.getItem("voltmap-accounts") || "[]");
         account = accounts.find(item => item.email === payload.email && item.role === "user");
-
         if (!account) {
             account = {
                 name: payload.name || payload.email.split("@")[0],
@@ -2416,19 +2016,14 @@ async function handleGoogleCredential(response) {
             localStorage.setItem("voltmap-accounts", JSON.stringify(accounts));
         }
     }
-
     currentUser = { name: account.name, email: account.email, role: account.role || "user" };
     localStorage.setItem("voltmap-session", JSON.stringify(currentUser));
-
     applyCurrentUser();
     document.getElementById("authOverlay").classList.add("hidden");
-
     showToast("Welcome to VoltMap", `Signed in as ${currentUser.name} via Google.`);
 }
-
 function initializeAuth() {
     const savedSession = localStorage.getItem("voltmap-session");
-
     if (savedSession) {
         try {
             currentUser = JSON.parse(savedSession);
@@ -2438,128 +2033,92 @@ function initializeAuth() {
             localStorage.removeItem("voltmap-session");
         }
     }
-
     document.getElementById("authForm").addEventListener("submit", submitAuth);
     document.getElementById("authModeToggle").addEventListener("click", toggleAuthMode);
-    document.getElementById("forgotPasswordBtn")?.addEventListener("click", event => { event.preventDefault(); forgotPassword(); });
-
+    document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
     // FIX: mount + initialize "Sign in with Google" inside the auth card.
     initializeGoogleSignIn();
 }
-
 function toggleAuthMode() {
     const form = document.getElementById("authForm");
     const signUp = !form.dataset.mode || form.dataset.mode === "signin";
-
     form.dataset.mode = signUp ? "signup" : "signin";
-
     document.querySelector(".auth-name-field").hidden = !signUp;
     document.getElementById("authName").required = signUp;
-
     document.getElementById("authTitle").textContent = signUp ? "Create your account" : "Sign in to VoltMap";
     document.getElementById("authEyebrow").textContent = signUp ? "GET STARTED" : "WELCOME BACK";
     document.getElementById("authDescription").textContent = signUp
         ? "Create an account to manage bookings and payments."
         : "Choose your account type and sign in to find a charger.";
-
     document.getElementById("authSubmit").textContent = signUp ? "Create account" : "Sign in";
     document.getElementById("authModeToggle").textContent = signUp
         ? "Already have an account? Sign in"
         : "Create an account";
-
     document.getElementById("authError").textContent = "";
     document.getElementById("authPassword").autocomplete = signUp ? "new-password" : "current-password";
 }
-
 async function submitAuth(event) {
     event.preventDefault();
-
     const form = event.currentTarget;
     const signUp = form.dataset.mode === "signup";
-
     const role = document.getElementById("authRole").value;
     const email = document.getElementById("authEmail").value.trim().toLowerCase();
     const password = document.getElementById("authPassword").value;
     const name = document.getElementById("authName").value.trim();
     const error = document.getElementById("authError");
-
     if (!email || !email.includes("@") || password.length < 6 || (signUp && !name)) {
         error.textContent = "Enter a valid email, a password of at least 6 characters, and every required field.";
         return;
     }
-
-    // FIX: single fixed admin account — no new admin accounts can ever be
-    // created, and admin sign-in only succeeds against the hardcoded
-    // ADMIN_CREDENTIALS above. Driver ("user") accounts are unaffected
-    // and keep using the backend/localStorage flow below as before.
-    if (role === "admin") {
-        if (signUp) {
-            error.textContent = "Admin sign-up is disabled. VoltMap has a single fixed admin account — please sign in instead.";
-            return;
-        }
-
-        if (email !== ADMIN_CREDENTIALS.email.toLowerCase() || password !== ADMIN_CREDENTIALS.password) {
-            error.textContent = "Invalid admin credentials.";
-            return;
-        }
-
-        currentUser = { name: "VoltMap Admin", email: ADMIN_CREDENTIALS.email, role: "admin" };
-        localStorage.setItem("voltmap-session", JSON.stringify(currentUser));
-
-        applyCurrentUser();
-        document.getElementById("authOverlay").classList.add("hidden");
-
-        showToast("Welcome to VoltMap", "Signed in as admin.");
-        return;
-    }
-
+    // FIX: admin sign-in/sign-up now always goes through the backend
+    // (server.js checks it against process.env.ADMIN_EMAIL /
+    // ADMIN_PASSWORD, which never ships to the browser or gets committed
+    // to git). Nothing is hardcoded here anymore — this just falls
+    // through to the same apiRequest call every other role uses below.
     let account;
-
     try {
         const result = await apiRequest(signUp ? "/auth/signup" : "/auth/login", {
             method: "POST",
             body: JSON.stringify({ name, email, password, role })
         });
-
         account = result.data;
-
     } catch (backendError) {
         if (backendError.isApiError) {
             error.textContent = backendError.message;
             return;
         }
-
+        // FIX: admin must always be verified by the backend against
+        // ADMIN_EMAIL/ADMIN_PASSWORD. Never let admin sign-in/sign-up fall
+        // back to a locally created account — that would just move the
+        // security hole from "hardcoded in app.js" to "anyone can create
+        // an admin account while the backend happens to be down."
+        if (role === "admin") {
+            error.textContent = "Admin sign-in requires the backend server to be running.";
+            return;
+        }
         const accounts = JSON.parse(localStorage.getItem("voltmap-accounts") || "[]");
-
         if (signUp) {
             if (accounts.some(item => item.email === email && item.role === role)) {
                 error.textContent = "An account with this email and role already exists. Sign in instead.";
                 return;
             }
-
             account = { name, email, role, password };
             accounts.push(account);
             localStorage.setItem("voltmap-accounts", JSON.stringify(accounts));
-
         } else {
             account = accounts.find(item => item.email === email && item.role === role && item.password === password);
-
             if (!account) {
                 error.textContent = "Start the backend server or create an offline preview account.";
                 return;
             }
         }
     }
-
     currentUser = { name: account.name, email: account.email, role: account.role };
     localStorage.setItem("voltmap-session", JSON.stringify(currentUser));
-
     applyCurrentUser();
     document.getElementById("authOverlay").classList.add("hidden");
-
     showToast("Welcome to VoltMap", `Signed in as ${currentUser.role}.`);
 }
-
 /* =========================================================
    FORGOT PASSWORD — EMAIL CODE RESET
    Expects three backend routes (add them to your API if they
@@ -2572,56 +2131,42 @@ async function submitAuth(event) {
    and shown in a toast/console) so the flow still works end to
    end for testing.
    ========================================================= */
-
 let resetPasswordDraft = { email: "", codeVerified: false };
-
 function forgotPassword() {
     const prefillEmail = document.getElementById("authEmail").value.trim();
     resetPasswordDraft = { email: prefillEmail, codeVerified: false };
-
     ensureResetPasswordModal();
     renderResetPasswordStep("email");
     document.getElementById("resetPasswordModal").classList.add("open");
 }
-
 function ensureResetPasswordModal() {
     let modal = document.getElementById("resetPasswordModal");
     if (modal) return modal;
-
-   modal = document.createElement("div");
-modal.id = "resetPasswordModal";
-modal.className = "modal-overlay open";
-modal.style.zIndex = "999999";
-
-modal.innerHTML = `
-    <div class="modal" style="position:relative;">
-        <button class="modal-close" id="resetPasswordCloseBtn" type="button"
-            style="position:absolute;top:17px;right:17px;">
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-        <div id="resetPasswordContent"></div>
-    </div>
-`;
-
-document.body.appendChild(modal);
-modal.style.display = "flex";
-
+    modal = document.createElement("div");
+    modal.id = "resetPasswordModal";
+    modal.className = "modal-overlay";
+    modal.innerHTML = `
+        <div class="modal" style="position:relative;">
+            <button class="modal-close" id="resetPasswordCloseBtn" type="button"
+                style="position:absolute;top:17px;right:17px;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="resetPasswordContent"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
     modal.addEventListener("click", event => {
         if (event.target === modal) modal.classList.remove("open");
     });
-
     document.getElementById("resetPasswordCloseBtn")?.addEventListener("click", () => {
         modal.classList.remove("open");
     });
-
     return modal;
 }
-
 function renderResetPasswordStep(step) {
     const modal = ensureResetPasswordModal();
     const content = modal.querySelector("#resetPasswordContent");
     if (!content) return;
-
     if (step === "email") {
         content.innerHTML = `
             <span class="modal-eyebrow">RESET PASSWORD</span>
@@ -2635,20 +2180,16 @@ function renderResetPasswordStep(step) {
                 <i class="fa-regular fa-paper-plane"></i> Send reset code
             </button>
         `;
-
         content.querySelector("#sendResetCodeBtn").addEventListener("click", () => {
             const email = content.querySelector("#resetEmailInput").value.trim().toLowerCase();
             const errorEl = content.querySelector("#resetPasswordError");
-
             if (!email || !email.includes("@")) {
                 errorEl.textContent = "Enter a valid email address.";
                 return;
             }
-
             errorEl.textContent = "";
             sendResetCode(email);
         });
-
     } else if (step === "code") {
         content.innerHTML = `
             <span class="modal-eyebrow">RESET PASSWORD</span>
@@ -2668,23 +2209,18 @@ function renderResetPasswordStep(step) {
                 <button type="button" id="changeResetEmailBtn">Use a different email</button>
             </div>
         `;
-
         content.querySelector("#verifyResetCodeBtn").addEventListener("click", () => {
             const code = content.querySelector("#resetCodeInput").value.trim();
             const errorEl = content.querySelector("#resetPasswordError");
-
             if (!code) {
                 errorEl.textContent = "Enter the code we sent you.";
                 return;
             }
-
             errorEl.textContent = "";
             verifyResetCode(code);
         });
-
         content.querySelector("#resendResetCodeBtn").addEventListener("click", () => sendResetCode(resetPasswordDraft.email));
         content.querySelector("#changeResetEmailBtn").addEventListener("click", () => renderResetPasswordStep("email"));
-
     } else if (step === "newPassword") {
         content.innerHTML = `
             <span class="modal-eyebrow">RESET PASSWORD</span>
@@ -2700,13 +2236,11 @@ function renderResetPasswordStep(step) {
                 <i class="fa-solid fa-lock"></i> Reset password
             </button>
         `;
-
         content.querySelector("#submitNewPasswordBtn").addEventListener("click", () => {
             const newPassword = content.querySelector("#newPasswordInput").value;
             const confirmPassword = content.querySelector("#confirmPasswordInput").value;
             submitNewPassword(newPassword, confirmPassword);
         });
-
     } else if (step === "done") {
         content.innerHTML = `
             <div style="text-align:center;">
@@ -2722,7 +2256,6 @@ function renderResetPasswordStep(step) {
                 <button type="button" class="btn-primary full-btn" id="resetDoneBtn" style="margin-top:16px;">Back to sign in</button>
             </div>
         `;
-
         content.querySelector("#resetDoneBtn").addEventListener("click", () => {
             document.getElementById("resetPasswordModal").classList.remove("open");
             const emailField = document.getElementById("authEmail");
@@ -2730,11 +2263,9 @@ function renderResetPasswordStep(step) {
         });
     }
 }
-
 async function sendResetCode(email) {
     resetPasswordDraft.email = email;
     resetPasswordDraft.codeVerified = false;
-
     try {
         await apiRequest("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
         showToast("Code sent", `A verification code was sent to ${email}.`);
@@ -2744,30 +2275,24 @@ async function sendResetCode(email) {
         const pending = JSON.parse(localStorage.getItem("voltmap-reset-codes") || "{}");
         pending[email] = { code: demoCode, expires: Date.now() + 10 * 60 * 1000 };
         localStorage.setItem("voltmap-reset-codes", JSON.stringify(pending));
-
         console.warn("Email service unavailable — demo reset code:", demoCode);
         showToast("Demo mode (no backend)", `Email service unavailable. Demo code: ${demoCode}`);
     }
-
     renderResetPasswordStep("code");
 }
-
 async function verifyResetCode(code) {
     try {
         await apiRequest("/auth/verify-reset-code", {
             method: "POST",
             body: JSON.stringify({ email: resetPasswordDraft.email, code })
         });
-
         resetPasswordDraft.codeVerified = true;
         renderResetPasswordStep("newPassword");
         return;
-
     } catch (backendError) {
         // Demo/offline fallback — verify against the locally generated code.
         const pending = JSON.parse(localStorage.getItem("voltmap-reset-codes") || "{}");
         const entry = pending[resetPasswordDraft.email];
-
         if (entry && entry.code === code && Date.now() < entry.expires) {
             resetPasswordDraft.codeVerified = true;
             renderResetPasswordStep("newPassword");
@@ -2778,26 +2303,21 @@ async function verifyResetCode(code) {
         }
     }
 }
-
 async function submitNewPassword(newPassword, confirmPassword) {
     const modal = document.getElementById("resetPasswordModal");
     const errorEl = modal?.querySelector("#resetPasswordError");
-
     if (!resetPasswordDraft.codeVerified) {
         if (errorEl) errorEl.textContent = "Please verify your reset code first.";
         return;
     }
-
     if (newPassword.length < 6) {
         if (errorEl) errorEl.textContent = "Password must be at least 6 characters.";
         return;
     }
-
     if (newPassword !== confirmPassword) {
         if (errorEl) errorEl.textContent = "Passwords don't match.";
         return;
     }
-
     try {
         await apiRequest("/auth/reset-password", {
             method: "POST",
@@ -2807,74 +2327,55 @@ async function submitNewPassword(newPassword, confirmPassword) {
         // Demo/offline fallback — update the locally stored offline account, if any.
         const accounts = JSON.parse(localStorage.getItem("voltmap-accounts") || "[]");
         const account = accounts.find(item => item.email === resetPasswordDraft.email);
-
         if (account) {
             account.password = newPassword;
             localStorage.setItem("voltmap-accounts", JSON.stringify(accounts));
         }
     }
-
     const pending = JSON.parse(localStorage.getItem("voltmap-reset-codes") || "{}");
     delete pending[resetPasswordDraft.email];
     localStorage.setItem("voltmap-reset-codes", JSON.stringify(pending));
-
     renderResetPasswordStep("done");
     showToast("Password updated", "You can now sign in with your new password.");
 }
-
 function applyCurrentUser() {
     if (!currentUser) return;
-
     const initials = currentUser.name.split(" ").map(part => part[0]).join("").slice(0, 2).toUpperCase();
-
     document.querySelector(".avatar").textContent = initials;
     document.querySelector("#profileBtn span").textContent = currentUser.name.split(" ")[0];
 }
-
 function openSettings() {
     if (!currentUser) return;
-
     document.getElementById("settingsUser").innerHTML = `
         <strong>${currentUser.name}</strong>
         <span>${currentUser.email} · ${currentUser.role === "admin" ? "Administrator" : "Driver"}</span>
     `;
-
     document.getElementById("settingsModal").classList.add("open");
 }
-
 function logout() {
     localStorage.removeItem("voltmap-session");
     currentUser = null;
-
     document.getElementById("settingsModal").classList.remove("open");
     document.getElementById("authForm").reset();
-
     if (document.getElementById("authForm").dataset.mode === "signup") toggleAuthMode();
-
     document.getElementById("authError").textContent = "";
     document.getElementById("authOverlay").classList.remove("hidden");
 }
-
 /* =========================================================
    MY ORDERS
    ========================================================= */
-
 function openOrders() {
     renderOrders();
     document.getElementById("ordersModal").classList.add("open");
 }
-
 function getUserOrders() {
     if (!currentUser) return [];
-
     return JSON.parse(localStorage.getItem("voltmap-orders") || "[]")
         .filter(order => order.userEmail === currentUser.email);
 }
-
 function renderOrders() {
     const orders = getUserOrders();
     const content = document.getElementById("ordersContent");
-
     if (!orders.length) {
         content.innerHTML = `
             <div class="orders-empty">
@@ -2884,10 +2385,8 @@ function renderOrders() {
         `;
         return;
     }
-
     content.innerHTML = orders.map(order => {
         const isCancellable = order.status !== "cancelled";
-
         return `
             <article class="order-card">
                 <div class="order-card-head">
@@ -2897,12 +2396,10 @@ function renderOrders() {
                     </div>
                     <span class="order-status">${escapeHtmlSafe(order.status || "Confirmed")}</span>
                 </div>
-
                 <div class="order-meta">
                     <span><i class="fa-regular fa-calendar"></i> ${escapeHtmlSafe(order.date)} · ${escapeHtmlSafe(order.time)}</span>
                     <span>₹${Number(order.amount || 0)} · ${escapeHtmlSafe(order.paymentMethod || "")}</span>
                 </div>
-
                 <div class="order-bottom">
                     <span>Payment: <strong class="paid">${escapeHtmlSafe(order.paymentStatus || "Paid")}</strong></span>
                     ${order.rating
@@ -2912,7 +2409,6 @@ function renderOrders() {
                            </button>`
                     }
                 </div>
-
                 ${isCancellable ? `
                     <button
                         type="button"
@@ -2923,7 +2419,6 @@ function renderOrders() {
                         <i class="fa-solid fa-ban"></i> Cancel booking
                     </button>
                 ` : ""}
-
                 <div style="margin-top:8px;font-family:var(--font-mono);font-size:8px;color:var(--faint);">
                     Booking ID: ${escapeHtmlSafe(order.bookingId || order.id)}
                 </div>
@@ -2931,80 +2426,61 @@ function renderOrders() {
         `;
     }).join("");
 }
-
 /* =========================================================
    CANCEL BOOKING
    (backend route already existed — nothing in the frontend
    ever called it, so cancellations only ever happened server-side)
    ========================================================= */
-
 async function cancelBooking(id) {
     if (!currentUser) return;
     if (!confirm("Cancel this booking? This can't be undone.")) return;
-
     const orders = JSON.parse(localStorage.getItem("voltmap-orders") || "[]");
     const order = orders.find(item => (item.id === id || item.bookingId === id) && item.userEmail === currentUser.email);
-
     if (!order) return;
-
     order.status = "cancelled";
     order.cancelledAt = new Date().toISOString();
     localStorage.setItem("voltmap-orders", JSON.stringify(orders));
-
     try {
         await apiRequest(`/bookings/${encodeURIComponent(id)}/cancel`, { method: "PATCH" });
     } catch (error) {
         console.warn("Backend cancellation failed, local status was still updated.", error);
     }
-
     const station = stations.find(s => s.id === order.stationId);
     if (station) {
         station.available = Math.min(station.total, station.available + 1);
         renderStations();
     }
-
     renderOrders();
     showToast("Booking cancelled", `${order.stationName} · ${order.bookingId || order.id}`);
 }
-
 /* =========================================================
    RATE ORDER
    ========================================================= */
-
 function rateOrder(id) {
     const orders = JSON.parse(localStorage.getItem("voltmap-orders") || "[]");
     const order = orders.find(item => (item.id === id || item.bookingId === id) && item.userEmail === currentUser?.email);
-
     if (!order) return;
-
     const rating = prompt("Rate your charging experience from 1 to 5:");
     if (rating === null) return;
-
     const value = Number(rating);
-
     if (value < 1 || value > 5 || Number.isNaN(value)) {
         showToast("Invalid rating", "Please enter a rating between 1 and 5.");
         return;
     }
-
     order.rating = value;
     localStorage.setItem("voltmap-orders", JSON.stringify(orders));
-
     if (order.id) {
         syncToBackend(`/orders/${encodeURIComponent(order.id)}/rating`, {
             method: "PATCH",
             body: JSON.stringify({ userEmail: currentUser.email, rating: value })
         });
     }
-
     renderOrders();
     showToast("Thank you for your rating", `${value}/5 saved for ${order.stationName}.`);
 }
-
 /* =========================================================
    HELPER: ATTRIBUTE ESCAPE
    ========================================================= */
-
 function escapeAttribute(value) {
     return String(value || "")
         .replace(/&/g, "&amp;")
@@ -3013,55 +2489,41 @@ function escapeAttribute(value) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
 }
-
 /* =========================================================
    SOCKET.IO
    ========================================================= */
-
 let socket = null;
-
 function initializeSocket() {
     if (typeof io !== "function") return;
-
     try {
         // FIX: this was hardcoded to http://localhost:5000, which can
         // never connect once the frontend is deployed. Connect to the
         // same backend the REST calls already use.
         socket = io(API_BASE);
-
         socket.on("station:availability", data => {
             if (!data) return;
-
             const station = stations.find(item => item.id === data.stationId);
             if (!station) return;
-
             station.available = data.availableSlots;
             renderStations();
         });
-
         socket.on("stations:update", serverStations => {
             if (!Array.isArray(serverStations)) return;
-
             serverStations.forEach(serverStation => {
                 const localStation = stations.find(station => String(station.id) === String(serverStation.id));
                 if (!localStation) return;
-
                 if (serverStation.availableSlots !== undefined) {
                     localStation.available = Number(serverStation.availableSlots);
                 }
             });
-
             renderStations();
         });
-
         socket.on("connect", () => console.log("⚡ VoltMap Socket.IO connected"));
         socket.on("disconnect", () => console.log("VoltMap Socket.IO disconnected"));
-
     } catch (socketError) {
         console.warn("Socket.IO initialization failed:", socketError);
     }
 }
-
 try {
     initializeSocket();
 } catch {

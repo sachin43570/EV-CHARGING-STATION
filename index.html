@@ -81,13 +81,15 @@
     </header>
     <!-- ================= MAIN ================= -->
     <main class="main-layout">
-        <!-- ================= SIDEBAR / MOBILE BOTTOM SHEET ================= -->
-        <aside class="sidebar" id="sidebar">
-            <!-- FIX (bottom sheet feature): drag handle for the Google Maps–style
-                 mobile bottom sheet. Hidden on desktop; only shown under the
-                 existing max-width:800px mobile layout. Dragging/tapping this
-                 handle resizes #sidebar between peek / default / full states. -->
-            <div class="sheet-handle" id="sheetHandle" aria-hidden="true"></div>
+        <!-- ================= SIDEBAR ================= -->
+        <aside class="sidebar">
+            <!-- FEATURE: Google Maps-style draggable bottom sheet handle.
+                 Mobile-only (see style.css @media max-width:800px). Desktop
+                 sidebar layout is completely untouched — this element is
+                 simply hidden there. Drag logic lives in app.js. -->
+            <div class="sheet-handle" id="sheetHandle" aria-hidden="true">
+                <span class="sheet-handle-bar"></span>
+            </div>
             <div class="sidebar-header">
                 <div>
                     <h1>Find a charger</h1>
@@ -553,8 +555,8 @@
             <button class="btn-primary full-btn" id="authSubmit" type="submit">Sign in</button>
         </form>
         <div class="auth-links">
-    <button id="authModeToggle" type="button">Create an account</button>
-    <button id="forgotPasswordBtn" type="button" onclick="forgotPassword(); return false;">Forgot password?</button>
+            <button id="authModeToggle" type="button">Create an account</button>
+            <button id="forgotPasswordBtn" type="button">Forgot password?</button>
         </div>
     </div>
 </div>
