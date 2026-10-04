@@ -54,6 +54,7 @@ const DATA_DIR = path.join(__dirname, "data");
 const STATIONS_FILE = path.join(DATA_DIR, "stations.json");
 const BOOKINGS_FILE = path.join(DATA_DIR, "bookings.json");
 const DATABASE_FILE = path.join(DATA_DIR, "database.json");
+const PAYMENT_INTENTS_FILE = path.join(DATA_DIR, "payment-intents.json");
 if (!fs.existsSync(DATA_DIR))
     fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(STATIONS_FILE))
@@ -61,8 +62,10 @@ if (!fs.existsSync(STATIONS_FILE))
 if (!fs.existsSync(BOOKINGS_FILE))
     fs.writeFileSync(BOOKINGS_FILE, "[]");
 if (!fs.existsSync(DATABASE_FILE)) {
-    fs.writeFileSync(DATABASE_FILE, JSON.stringify({ users: [], stationRatings: [], savedPlaces: [], orders: [], resetCodes: [] }, null, 2));
+    fs.writeFileSync(DATABASE_FILE, JSON.stringify({ users: [], stationRatings: [], savedPlaces: [], orders: [], transactions: [], resetCodes: [] }, null, 2));
 }
+if (!fs.existsSync(PAYMENT_INTENTS_FILE))
+    fs.writeFileSync(PAYMENT_INTENTS_FILE, "[]");
 
 // ==================================================
 // SEED DEMO STATIONS
@@ -161,6 +164,10 @@ app.use(helmet({ crossOriginResourcePolicy: false, contentSecurityPolicy: false 
 
 app.use(cors({ origin: CLIENT_URL === "*" ? true : CLIENT_URL, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] }));
 
+// Razorpay signs the exact request bytes. This route must be registered before
+// express.json(), otherwise the signature can never be verified reliably.
+app.post("/api/payments/webhook", express.raw({ type: "application/json" }), handleRazorpayWebhook);
+
 app.use(express.json({ limit: "1mb" }));
 
 app.use(morgan("dev"));
@@ -204,6 +211,7 @@ function readDatabase() {
         stationRatings: Array.isArray(database.stationRatings) ? database.stationRatings : [],
         savedPlaces: Array.isArray(database.savedPlaces) ? database.savedPlaces : [],
         orders: Array.isArray(database.orders) ? database.orders : [],
+        transactions: Array.isArray(database.transactions) ? database.transactions : [],
         resetCodes: Array.isArray(database.resetCodes) ? database.resetCodes : []
     };
 }
@@ -244,6 +252,80 @@ function generateBookingId() {
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const random = crypto.randomBytes(4).toString("hex").toUpperCase();
     return `VM-${date}-${random}`;
+}
+
+function generateTransactionId() {
+    return `TXN-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+}
+
+// The amount is calculated only on the server. Do not accept an amount from
+// a browser for a real payment: it is trivially editable in DevTools.
+function calculateBookingAmount(station) {
+    return Math.round(18.4 * Number(station.pricePerKwh ?? station.price ?? 0));
+}
+
+function readPaymentIntents() {
+    const intents = readJson(PAYMENT_INTENTS_FILE);
+    return Array.isArray(intents) ? intents : [];
+}
+
+function createTransaction(database, booking, details = {}) {
+    const existing = details.razorpayPaymentId && database.transactions.find(transaction =>
+        transaction.razorpayPaymentId === details.razorpayPaymentId);
+    if (existing) return existing;
+    const transaction = {
+        transactionId: generateTransactionId(),
+        bookingId: booking.bookingId,
+        amount: booking.amount,
+        currency: "INR",
+        method: booking.paymentMethod,
+        status: booking.paymentStatus,
+        razorpayOrderId: details.razorpayOrderId || null,
+        razorpayPaymentId: details.razorpayPaymentId || null,
+        createdAt: new Date().toISOString()
+    };
+    database.transactions.unshift(transaction);
+    return transaction;
+}
+
+function handleRazorpayWebhook(req, res) {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!webhookSecret)
+        return res.status(503).json({ success: false, message: "Razorpay webhook is not configured" });
+    const signature = req.header("x-razorpay-signature");
+    const expected = crypto.createHmac("sha256", webhookSecret).update(req.body).digest("hex");
+    const valid = signature && Buffer.byteLength(signature) === Buffer.byteLength(expected) &&
+        crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+    if (!valid) return res.status(400).json({ success: false, message: "Invalid Razorpay webhook signature" });
+    let payload;
+    try { payload = JSON.parse(req.body.toString("utf8")); }
+    catch { return res.status(400).json({ success: false, message: "Invalid webhook payload" }); }
+    const payment = payload?.payload?.payment?.entity;
+    const orderId = payment?.order_id;
+    if (orderId) {
+        const intents = readPaymentIntents();
+        const index = intents.findIndex(intent => intent.razorpayOrderId === orderId);
+        if (index !== -1) {
+            intents[index].webhookEvent = payload.event;
+            intents[index].webhookPaymentId = payment.id || null;
+            intents[index].webhookStatus = payment.status || null;
+            intents[index].webhookReceivedAt = new Date().toISOString();
+            writeJson(PAYMENT_INTENTS_FILE, intents);
+        }
+    }
+    // A captured webhook is preserved even when the browser's verify request
+    // is interrupted. Reconciliation can safely retry the booking from the
+    // persisted payment intent without trusting a browser claim.
+    res.status(200).json({ success: true });
+}
+
+// FIX: vehicle number was only ever checked for "not empty" (both here and
+// on the frontend), so "x", "123", "asdf" all passed straight through to a
+// confirmed, paid booking. Matches standard Indian plates (KA05MX1234) and
+// the newer BH-series format (22BH1234A).
+const VEHICLE_NUMBER_PATTERN = /^([A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{4}|[0-9]{2}BH[0-9]{4}[A-Z]{1,2})$/;
+function isValidVehicleNumber(value) {
+    return VEHICLE_NUMBER_PATTERN.test(String(value || "").trim().toUpperCase());
 }
 
 function getStationStatus(station) {
@@ -1083,6 +1165,12 @@ app.post("/api/bookings", (req, res, next) => {
                 message: "stationId, name, vehicleNumber, date and time are required"
             });
         }
+        if (!isValidVehicleNumber(vehicleNumber)) {
+            return res.status(400).json({
+                success: false,
+                message: "Enter a valid vehicle number (e.g. KA05MX1234 or 22BH1234A)"
+            });
+        }
         const stations = readJson(STATIONS_FILE);
         const stationIndex = stations.findIndex(s => normalizeStationId(s.id) ===
             normalizeStationId(stationId));
@@ -1202,13 +1290,17 @@ app.post("/api/bookings", (req, res, next) => {
                 ...orderRecord
             };
         }
+        const transaction = createTransaction(database, booking, {
+            razorpayOrderId: booking.razorpayOrderId,
+            razorpayPaymentId: booking.razorpayPaymentId
+        });
         writeJson(DATABASE_FILE, database);
         io.emit("booking:created", booking);
         broadcastStations();
         res.status(201).json({
             success: true,
             message: "Booking confirmed",
-            data: booking
+            data: { ...booking, transaction }
         });
     }
     catch (error) {
@@ -1389,7 +1481,7 @@ app.patch("/api/bookings/:id/cancel", (req, res) => {
 
 // ==================================================
 
-app.patch("/api/stations/:id/availability", (req, res) => {
+app.patch("/api/stations/:id/availability", requireAdmin, (req, res) => {
     const availableSlots = Number(req.body.availableSlots);
     if (!Number.isInteger(availableSlots) ||
         availableSlots < 0) {
@@ -1432,7 +1524,7 @@ app.patch("/api/stations/:id/availability", (req, res) => {
 
 // ==================================================
 
-app.post("/api/payment/create-order", async (req, res, next) => {
+app.post("/api/payments/create-order", async (req, res, next) => {
     try {
         if (!razorpay) {
             return res.status(503).json({
@@ -1440,36 +1532,50 @@ app.post("/api/payment/create-order", async (req, res, next) => {
                 message: "Razorpay is not configured. Install the razorpay package and add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env."
             });
         }
-        const amount = Number(req.body.amount);
-        const currency = String(req.body.currency ||
-            "INR").toUpperCase();
+        const { stationId, name, userEmail, vehicleNumber, date, time } = req.body;
+        const currency = "INR";
         const receipt = String(req.body.receipt ||
             generateBookingId());
-        if (!Number.isInteger(amount) ||
-            amount <= 0) {
+        if (!stationId || !name || !userEmail || !vehicleNumber || !date || !time ||
+            !isValidVehicleNumber(vehicleNumber)) {
             return res.status(400).json({
                 success: false,
-                message: "A valid positive amount is required"
+                message: "Complete, valid booking details are required before payment"
             });
         }
-        if (currency !== "INR") {
-            return res.status(400).json({
-                success: false,
-                message: "This VoltMap configuration currently accepts INR payments only"
-            });
-        }
+        const stations = readJson(STATIONS_FILE);
+        const station = stations.find(item => normalizeStationId(item.id) === normalizeStationId(stationId));
+        if (!station) return res.status(404).json({ success: false, message: "Station not found" });
+        if (getStationAvailable(station) <= 0)
+            return res.status(409).json({ success: false, message: "No charging slots are currently available" });
+        const amount = calculateBookingAmount(station);
+        if (amount <= 0) return res.status(400).json({ success: false, message: "Station has no valid price" });
         const razorpayOrder = await razorpay.orders.create({
             amount: amount * 100,
             currency,
             receipt,
             notes: {
                 source: "VoltMap",
-                userEmail: String(req.body.userEmail ||
-                    "")
-                    .trim()
-                    .toLowerCase()
+                stationId: String(station.id),
+                userEmail: String(userEmail).trim().toLowerCase()
             }
         });
+        const intents = readPaymentIntents();
+        intents.push({
+            razorpayOrderId: razorpayOrder.id,
+            amount,
+            currency,
+            stationId: station.id,
+            name: String(name).trim(),
+            userEmail: String(userEmail).trim().toLowerCase(),
+            vehicleNumber: String(vehicleNumber).trim().toUpperCase(),
+            vehicleModel: String(req.body.vehicleModel || ""),
+            chargerName: String(req.body.chargerName || "Charger"),
+            date: String(date), time: String(time),
+            durationMinutes: Number(req.body.durationMinutes) || 60,
+            createdAt: new Date().toISOString()
+        });
+        writeJson(PAYMENT_INTENTS_FILE, intents);
         res.status(201).json({
             success: true,
             data: {
@@ -1493,7 +1599,7 @@ app.post("/api/payment/create-order", async (req, res, next) => {
 
 // ==================================================
 
-app.post("/api/payment/verify", (req, res, next) => {
+app.post("/api/payments/verify", (req, res, next) => {
     try {
         if (!razorpay) {
             return res.status(503).json({
@@ -1501,7 +1607,7 @@ app.post("/api/payment/verify", (req, res, next) => {
                 message: "Razorpay is not configured on the server."
             });
         }
-        const { razorpayOrderId, razorpayPaymentId, razorpaySignature, amount, userEmail, name, stationId, vehicleNumber, date, time, durationMinutes = 60 } = req.body;
+        const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
         if (!razorpayOrderId ||
             !razorpayPaymentId ||
             !razorpaySignature) {
@@ -1527,17 +1633,15 @@ app.post("/api/payment/verify", (req, res, next) => {
                 message: "Razorpay payment signature verification failed"
             });
         }
-        if (!stationId ||
-            !name ||
-            !userEmail ||
-            !vehicleNumber ||
-            !date ||
-            !time) {
+        const intent = readPaymentIntents().find(item => item.razorpayOrderId === razorpayOrderId);
+        if (!intent) {
             return res.status(400).json({
                 success: false,
-                message: "Booking information is incomplete"
+                message: "Payment order was not created by this server"
             });
         }
+        const { stationId, name, userEmail, vehicleNumber, date, time } = intent;
+        const durationMinutes = intent.durationMinutes;
         const stations = readJson(STATIONS_FILE);
         const stationIndex = stations.findIndex(s => normalizeStationId(s.id) ===
             normalizeStationId(stationId));
@@ -1570,7 +1674,7 @@ app.post("/api/payment/verify", (req, res, next) => {
         }
         const bookings = readJson(BOOKINGS_FILE);
         const bookingId = generateBookingId();
-        const numericAmount = Number(amount) || 0;
+        const numericAmount = intent.amount;
         const booking = {
             id: bookingId,
             bookingId,
@@ -1588,8 +1692,7 @@ app.post("/api/payment/verify", (req, res, next) => {
             date: String(date),
             time: String(time),
             durationMinutes: Number(durationMinutes) || 60,
-            chargerName: String(req.body.chargerName ||
-                "Charger"),
+            chargerName: intent.chargerName,
             amount: numericAmount,
             paymentMethod: "RAZORPAY",
             paymentStatus: "Paid",
@@ -1616,8 +1719,7 @@ app.post("/api/payment/verify", (req, res, next) => {
             chargerName: booking.chargerName,
             date: booking.date,
             time: booking.time,
-            vehicle: String(req.body.vehicleModel ||
-                ""),
+            vehicle: intent.vehicleModel,
             vehicleNumber: booking.vehicleNumber,
             amount: numericAmount,
             paymentMethod: "RAZORPAY",
@@ -1628,6 +1730,8 @@ app.post("/api/payment/verify", (req, res, next) => {
             rating: null,
             createdAt: booking.createdAt
         };
+        const transaction = createTransaction(database, booking, { razorpayOrderId, razorpayPaymentId });
+        orderRecord.transaction = transaction;
         database.orders.unshift(orderRecord);
         writeJson(DATABASE_FILE, database);
         io.emit("payment:successful", {
@@ -1720,7 +1824,8 @@ io.on("connection", socket => {
 
 // ==================================================
 
-setInterval(() => {
+// Availability changes only through booking, cancellation, or the admin route.
+if (false) setInterval(() => {
     try {
         const stations = readJson(STATIONS_FILE);
         if (!stations.length)

@@ -3,6 +3,7 @@ node_modules/
 
 # Environment variables
 .env
+data/payment-intents.json
 
 # Logs
 *.log
